@@ -3,8 +3,42 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MakanPay — Storefront</title>
+<title>MakanPay — Order online</title>
 <link rel="stylesheet" href="/app.css">
+<style>
+  .hero { background: var(--surface); border-bottom: 1px solid var(--border); padding: 28px 0; }
+  .hero-in { max-width: 1180px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; gap: 16px; }
+  .hero .emoji { width: 56px; height: 56px; border-radius: 14px; display: grid; place-items: center; font-size: 28px; background: var(--bg); }
+  .hero h1 { margin: 0; font-size: 22px; letter-spacing: -.02em; }
+  .hero p { margin: 2px 0 0; color: var(--muted); }
+  .hero .spacer { margin-left: auto; }
+
+  .shop { display: grid; grid-template-columns: 1fr 330px; gap: 20px; align-items: start; }
+  .cat-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 22px 0 10px; }
+  .cat-title:first-child { margin-top: 0; }
+  .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+  .item {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 12px; display: flex; gap: 10px; cursor: pointer; text-align: left; font: inherit; color: inherit;
+  }
+  .item:hover { border-color: var(--accent); box-shadow: var(--shadow); }
+  .item .ico { font-size: 24px; line-height: 1; }
+  .item .nm { font-weight: 600; }
+  .item .ds { color: var(--muted); font-size: 12px; margin: 2px 0 6px; }
+  .item .pr { font-family: var(--mono); font-size: 13px; font-weight: 600; }
+
+  .cart { position: sticky; top: 76px; }
+  .cart-line { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .cart-line .nm { flex: 1; }
+  .cart-line .qty { display: flex; align-items: center; gap: 4px; }
+  .cart-line .qty button { width: 22px; height: 22px; border-radius: 5px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; font: inherit; line-height: 1; }
+  .totals { padding-top: 10px; font-size: 13px; }
+  .totals .row { display: flex; justify-content: space-between; padding: 3px 0; }
+  .totals .row.grand { font-weight: 700; font-size: 15px; border-top: 1px solid var(--border); margin-top: 6px; padding-top: 8px; }
+  .split { background: var(--accent-soft); border-radius: 8px; padding: 10px 12px; margin-top: 12px; font-size: 12px; }
+  .split .row { display: flex; justify-content: space-between; padding: 2px 0; }
+  @media (max-width: 900px) { .shop { grid-template-columns: 1fr; } .cart { position: static; } }
+</style>
 </head>
 <body>
 <div class="topbar">
@@ -15,11 +49,41 @@
     <a href="/pos.html">POS</a>
   </nav>
 </div>
-<div class="wrap">
-  <div class="card"><div class="card-body empty">
-    <h2 style="margin:0 0 6px">Storefront</h2>
-    <p style="margin:0">Customer-facing ordering and Stripe Checkout — arriving in Phase 2.</p>
-  </div></div>
+
+<div class="hero">
+  <div class="hero-in">
+    <div class="emoji" id="hEmoji">🍽️</div>
+    <div>
+      <h1 id="hName">Loading…</h1>
+      <p id="hMeta"></p>
+    </div>
+    <div class="spacer"></div>
+    <select id="outletPick" style="width:auto"></select>
+  </div>
 </div>
+
+<div class="wrap">
+  <div class="shop">
+    <div id="menu"></div>
+
+    <div class="cart">
+      <div class="card" style="margin:0">
+        <div class="card-head"><h2>Your order</h2><div class="spacer"></div><span class="pill off" id="cartCount">0 items</span></div>
+        <div class="card-body">
+          <div id="cartLines"><p class="muted small" style="margin:0">Tap a dish to start your order.</p></div>
+          <div class="totals" id="totals" hidden></div>
+          <div class="split" id="split" hidden></div>
+          <label class="field" style="margin-top:14px"><span>Email (optional)</span><input id="email" type="email" placeholder="you@example.com"></label>
+          <button class="btn primary" id="pay" style="width:100%; justify-content:center" disabled>Pay</button>
+          <p class="small muted" style="margin:10px 0 0; text-align:center">
+            Card &amp; PayNow · test card <span class="mono">4242 4242 4242 4242</span>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/store.js"></script>
 </body>
 </html>

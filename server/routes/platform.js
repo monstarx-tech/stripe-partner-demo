@@ -59,9 +59,18 @@ router.get('/merchants/:id/products', (req, res) => {
   const merchant = db.merchants.findById(req.params.id);
   if (!merchant) return res.status(404).json({ error: 'Merchant not found' });
 
+  // A menu reads Mains -> Sides -> Drinks -> Desserts. Alphabetical ordering
+  // opens the storefront on the dessert list, which is not how anyone orders.
+  const CATEGORY_ORDER = ['Mains', 'Sides', 'Drinks', 'Desserts'];
+  const rank = c => {
+    const i = CATEGORY_ORDER.indexOf(c);
+    return i === -1 ? CATEGORY_ORDER.length : i;
+  };
+
   const products = db.products
-    .where('merchant_id = ? ORDER BY category, sort_order', merchant.id)
-    .filter(p => (req.query.all === 'true' ? true : p.active));
+    .where('merchant_id = ?', merchant.id)
+    .filter(p => (req.query.all === 'true' ? true : p.active))
+    .sort((a, b) => rank(a.category) - rank(b.category) || a.sort_order - b.sort_order);
 
   res.json({ merchant, products });
 });

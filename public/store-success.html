@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MakanPay — Order confirmed</title>
+<link rel="stylesheet" href="/app.css">
+<style>
+  .receipt { max-width: 560px; margin: 40px auto; }
+  .stamp { text-align: center; padding: 8px 0 22px; }
+  .stamp .tick { width: 56px; height: 56px; border-radius: 50%; background: var(--ok-soft); color: var(--ok); display: grid; place-items: center; font-size: 28px; margin: 0 auto 12px; }
+  .stamp h1 { margin: 0 0 4px; font-size: 22px; letter-spacing: -.02em; }
+  .stamp p { margin: 0; color: var(--muted); }
+  .ln { display: flex; justify-content: space-between; padding: 6px 0; }
+  .ln.grand { font-weight: 700; font-size: 16px; border-top: 1px solid var(--border); margin-top: 8px; padding-top: 10px; }
+
+  /* The fund-flow diagram — the whole Connect story in one glance. */
+  .flow { padding: 4px 0; }
+  .flow .bar { display: flex; height: 34px; border-radius: 8px; overflow: hidden; margin: 12px 0 10px; }
+  .flow .bar span { display: grid; place-items: center; font-size: 12px; font-weight: 700; color: #fff; }
+  .flow .bar .m { background: var(--ok); }
+  .flow .bar .p { background: var(--accent); }
+  .flow .leg { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; }
+  .flow .leg .k { display: flex; align-items: center; gap: 7px; }
+  .flow .leg .sw { width: 10px; height: 10px; border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="brand"><span class="dot"></span> MakanPay <small>storefront</small></div>
+  <nav class="topnav">
+    <a href="/admin.html">Console</a>
+    <a href="/store.html" class="active">Storefront</a>
+    <a href="/pos.html">POS</a>
+  </nav>
+</div>
+
+<div class="wrap">
+  <div class="receipt" id="receipt">
+    <div class="card"><div class="card-body empty">Confirming your payment…</div></div>
+  </div>
+</div>
+
+<script src="/store-success.js"></script>
+</body>
+</html>
