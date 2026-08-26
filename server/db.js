@@ -137,6 +137,7 @@ ensureColumn('merchants', 'cuisine',             `TEXT DEFAULT ''`);
 ensureColumn('merchants', 'brand_color',         `TEXT DEFAULT '#635bff'`);
 ensureColumn('merchants', 'logo_emoji',          `TEXT DEFAULT ''`);
 ensureColumn('merchants', 'created_at',          `TEXT DEFAULT ''`);
+ensureColumn('merchants', 'onboarding_mode',     `TEXT DEFAULT 'express'`);
 
 // orders: one ledger shared by web + POS + aggregator channels
 ensureColumn('orders', 'channel',              `TEXT DEFAULT 'web'`);

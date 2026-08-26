@@ -212,7 +212,10 @@ router.get('/status', async (req, res) => {
   if (!paymentIntentId) return res.status(400).json({ error: 'paymentIntentId is required' });
 
   try {
-    const pi = await stripe.paymentIntents.retrieve(paymentIntentId, onAccount(merchant));
+    // retrieve(id, params, options) — the connected-account scope is the THIRD
+    // argument. Passing it second makes Stripe parse it as a query param and
+    // reject it with parameter_unknown: stripeAccount.
+    const pi = await stripe.paymentIntents.retrieve(paymentIntentId, {}, onAccount(merchant));
     res.json({
       status: pi.status,
       amount: pi.amount,

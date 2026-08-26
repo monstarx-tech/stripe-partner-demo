@@ -13,6 +13,7 @@ const db = require('../db');
 const { config } = require('../config');
 const { stripe, idemKey, describeStripeError } = require('../lib/stripe');
 const { logEvent } = require('../lib/events');
+const { sgTestOnboarding } = require('../lib/testdata');
 
 // GET /accounts
 // List merchants and their connected-account linkage (local data only, no Stripe calls)
@@ -32,14 +33,21 @@ router.get('/', (req, res) => {
 // built from the lab spec rather than from types. If Stripe rejects a field,
 // this is the single place to adjust — the route surfaces the raw error
 // (param + code + requestId) so the fix is obvious.
-function buildAccountPayload(merchant) {
+function buildAccountPayload(merchant, dashboard = 'express') {
   return {
     display_name: merchant.name,
     identity: {
       country: (merchant.country || config.platform.country).toLowerCase(),
-      entity_type: 'company',
+      // 'individual', not 'company'. A Singapore COMPANY triggers full KYB:
+      // ACRA Bizfile, UEN verification, UBO proof and company-authorization
+      // documents — none of which a fictional demo outlet can produce, in test
+      // mode or otherwise. 'individual' needs data fields only, no uploads.
+      entity_type: 'individual',
     },
-    dashboard: 'express',
+    // 'express' — Stripe-hosted onboarding, Stripe owns KYC (lab default).
+    // 'none'    — API-based onboarding, the PLATFORM owns KYC and can prefill.
+    // This is Module 1's Decision 3, and it is per-client configuration.
+    dashboard,
     defaults: {
       currency: merchant.currency || config.platform.currency,
       responsibilities: {
@@ -75,11 +83,11 @@ function isV2Unavailable(err) {
     || /Accounts v2 is not enabled/i.test(err.message || '');
 }
 
-async function createConnectedAccount(merchant) {
-  const idempotencyKey = idemKey('account-create', merchant.id);
+async function createConnectedAccount(merchant, dashboard = 'express') {
+  const idempotencyKey = idemKey('account-create', merchant.id, dashboard);
 
   try {
-    const account = await stripe.v2.core.accounts.create(buildAccountPayload(merchant), { idempotencyKey });
+    const account = await stripe.v2.core.accounts.create(buildAccountPayload(merchant, dashboard), { idempotencyKey });
     return { account, api: 'v2' };
   } catch (err) {
     if (!isV2Unavailable(err)) throw err;
@@ -112,16 +120,19 @@ async function createConnectedAccount(merchant) {
 // POST /accounts
 // Create a new connected account for a merchant using the v2 Accounts API.
 router.post('/', async (req, res) => {
-  const { merchantId } = req.body;
+  const { merchantId, dashboard = 'express' } = req.body;
   const merchant = db.merchants.findById(merchantId);
   if (!merchant) return res.status(404).json({ error: 'Merchant not found' });
+  if (!['express', 'none'].includes(dashboard)) {
+    return res.status(400).json({ error: "dashboard must be 'express' or 'none'" });
+  }
 
   if (merchant.stripe_account_id) {
     return res.json({ accountId: merchant.stripe_account_id, alreadyExisted: true });
   }
 
   try {
-    const { account, api } = await createConnectedAccount(merchant);
+    const { account, api } = await createConnectedAccount(merchant, dashboard);
 
     // Payout schedule isn't a v2 create param. Set it afterwards through the
     // interoperable v1 endpoint — Track A's premise is that the PLATFORM
@@ -134,6 +145,7 @@ router.post('/', async (req, res) => {
     db.merchants.update(merchant.id, {
       stripe_account_id: account.id,
       payout_schedule: 'manual',
+      onboarding_mode: dashboard,
     });
 
     logEvent({
@@ -143,7 +155,14 @@ router.post('/', async (req, res) => {
       payload: { accountId: account.id, api, dashboard: 'express', payouts: 'manual' },
     });
 
-    res.json({ accountId: account.id, api });
+    res.json({
+      accountId: account.id,
+      api,
+      dashboard,
+      next: dashboard === 'express'
+        ? `GET ${config.baseUrl}/accounts/${merchant.id}/onboard`
+        : `POST ${config.baseUrl}/accounts/${merchant.id}/prefill-test`,
+    });
   } catch (err) {
     console.error('Account create failed:', describeStripeError(err));
     res.status(400).json(describeStripeError(err));
@@ -212,6 +231,61 @@ router.get('/:id/status', async (req, res) => {
     res.json(status);
   } catch (err) {
     console.error('Account status failed:', describeStripeError(err));
+    res.status(400).json(describeStripeError(err));
+  }
+});
+
+// POST /accounts/:id/prefill-test
+// API-based onboarding: the platform submits the merchant's KYC on their behalf
+// using Stripe test-mode values. Only valid for dashboard: 'none' accounts —
+// an Express account's KYC belongs to Stripe and this call returns
+// oauth_not_supported by design.
+//
+// In production this is the same code path an enterprise chain would use to
+// bulk-onboard outlets from data it already holds, instead of sending 60
+// franchisees through 60 separate browser sessions.
+router.post('/:id/prefill-test', async (req, res) => {
+  const merchant = db.merchants.findById(req.params.id);
+  if (!merchant) return res.status(404).json({ error: 'Merchant not found' });
+  if (!merchant.stripe_account_id) return res.status(400).json({ error: 'No Stripe account — create one first' });
+
+  if (merchant.onboarding_mode === 'express') {
+    return res.status(400).json({
+      error: 'This account uses Stripe-hosted (express) onboarding — the platform cannot submit its KYC.',
+      hint: `Open ${config.baseUrl}/accounts/${merchant.id}/onboard instead.`,
+    });
+  }
+
+  try {
+    const account = await stripe.accounts.update(
+      merchant.stripe_account_id,
+      sgTestOnboarding(merchant),
+    );
+
+    // Payout timing stays with the platform (Track A's premise).
+    await stripe.accounts.update(merchant.stripe_account_id, {
+      settings: { payouts: { schedule: { interval: 'manual' } } },
+    });
+
+    logEvent({
+      merchantId: merchant.id,
+      kind: 'connect.onboarding.prefilled',
+      message: `${merchant.name} onboarded via API with test data`,
+      payload: { accountId: account.id, charges_enabled: account.charges_enabled },
+    });
+
+    res.json({
+      accountId: account.id,
+      charges_enabled: account.charges_enabled,
+      payouts_enabled: account.payouts_enabled,
+      details_submitted: account.details_submitted,
+      capabilities: account.capabilities,
+      // proof_of_liveness stays outstanding and blocks PAYOUTS only.
+      // Charges and Terminal work regardless.
+      remaining_requirements: account.requirements.currently_due,
+    });
+  } catch (err) {
+    console.error('Prefill failed:', describeStripeError(err));
     res.status(400).json(describeStripeError(err));
   }
 });
