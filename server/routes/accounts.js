@@ -223,9 +223,20 @@ router.get('/:id/status', async (req, res) => {
       terminal_ready: Boolean(account.charges_enabled),
     };
 
-    if (account.details_submitted) {
-      const loginLink = await stripe.accounts.createLoginLink(account.id);
-      status.dashboard_url = loginLink.url;
+    status.onboarding_mode = merchant.onboarding_mode || 'express';
+
+    // An Express Dashboard login link only exists for dashboard: 'express'
+    // accounts. API-onboarded ('none') merchants have no Stripe-hosted
+    // dashboard at all — the platform is their entire UI. Asking anyway
+    // returns a 400, so don't, and never let this optional extra take down
+    // the status response.
+    if (account.details_submitted && status.onboarding_mode === 'express') {
+      try {
+        const loginLink = await stripe.accounts.createLoginLink(account.id);
+        status.dashboard_url = loginLink.url;
+      } catch (linkErr) {
+        status.dashboard_error = linkErr.message;
+      }
     }
 
     res.json(status);

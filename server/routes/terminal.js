@@ -6,22 +6,17 @@
 
 const express = require('express');
 const router = express.Router();
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const db = require('../db');
+const { config } = require('../config');
+const { stripe, onAccount, idemKey, describeStripeError } = require('../lib/stripe');
+const { logEvent } = require('../lib/events');
+const { ensureLocation, cacheReader } = require('../lib/terminal');
 
 function requireMerchantWithAccount(req, res) {
   const merchant = db.merchants.findById(req.body.merchantId || req.query.merchantId);
   if (!merchant) { res.status(404).json({ error: 'Merchant not found' }); return null; }
   if (!merchant.stripe_account_id) { res.status(400).json({ error: 'Merchant has no Stripe account yet' }); return null; }
   return merchant;
-}
-
-// Readers must belong to a Terminal Location — reuse the merchant's if we've made one, else create it
-async function ensureLocation(merchant) {
-  if (merchant.stripe_location_id) return merchant.stripe_location_id;
-
-  // TODO: Create a Terminal Location for this merchant (a Singapore address is
-  // fine for testing), cache its id on the merchant record, and return the id.
 }
 
 // POST /terminal/readers/register
@@ -32,10 +27,24 @@ router.post('/readers/register', async (req, res) => {
   const { registrationCode, label } = req.body;
 
   try {
-    // TODO: Get the merchant's Terminal Location (ensureLocation) and register a
-    // reader to it using registrationCode and label. Respond with { readerId, status }.
+    const locationId = await ensureLocation(merchant);
+    const reader = await stripe.terminal.readers.create(
+      { registration_code: registrationCode, label: label || 'Reader', location: locationId },
+      onAccount(merchant),
+    );
+
+    cacheReader(merchant, reader, label);
+    logEvent({
+      merchantId: merchant.id,
+      kind: 'terminal.reader.registered',
+      message: `Reader ${reader.label || reader.id} registered to ${merchant.name}`,
+      payload: { readerId: reader.id, deviceType: reader.device_type, locationId },
+    });
+
+    res.json({ readerId: reader.id, status: reader.status, deviceType: reader.device_type });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    console.error('Reader registration failed:', describeStripeError(err));
+    res.status(400).json(describeStripeError(err));
   }
 });
 
@@ -46,10 +55,18 @@ router.get('/readers', async (req, res) => {
   if (!merchant) return;
 
   try {
-    // TODO: List readers on the connected account and respond with each reader's
-    // id, label, and status.
+    const readers = await stripe.terminal.readers.list({ limit: 20 }, onAccount(merchant));
+    res.json({
+      readers: readers.data.map(r => ({
+        id: r.id,
+        label: r.label,
+        status: r.status,
+        deviceType: r.device_type,
+        kind: (r.device_type || '').startsWith('simulated') ? 'simulated' : 'physical',
+      })),
+    });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(400).json(describeStripeError(err));
   }
 });
 

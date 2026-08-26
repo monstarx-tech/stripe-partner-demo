@@ -14,33 +14,7 @@ const { config } = require('../config');
 const { stripe, onAccount, idemKey, describeStripeError } = require('../lib/stripe');
 const { logEvent } = require('../lib/events');
 const { applicationFee, formatAmount } = require('../lib/money');
-
-// Readers — simulated ones included — must belong to a Location.
-// Cached on the merchant row so we create exactly one per outlet.
-async function ensureLocation(merchant) {
-  if (merchant.stripe_location_id) return merchant.stripe_location_id;
-
-  const location = await stripe.terminal.locations.create(
-    {
-      display_name: merchant.name,
-      address: {
-        line1: '1 Raffles Place',
-        city: 'Singapore',
-        postal_code: '048616',
-        country: merchant.country || config.platform.country,
-      },
-    },
-    {
-      ...onAccount(merchant),
-      // Guards the race where two reader registrations fire at once and each
-      // creates its own Location.
-      idempotencyKey: idemKey('terminal-location', merchant.id),
-    },
-  );
-
-  db.merchants.update(merchant.id, { stripe_location_id: location.id });
-  return location.id;
-}
+const { ensureLocation, cacheReader } = require('../lib/terminal');
 
 // GET /smoke/preflight?merchantId=merchant_001
 // Answers "what is blocking me right now" without touching the reader.
@@ -229,4 +203,4 @@ router.get('/status', async (req, res) => {
   }
 });
 
-module.exports = { router, ensureLocation };
+module.exports = { router };

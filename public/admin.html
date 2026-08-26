@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MakanPay — Platform Console</title>
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<div class="topbar">
+  <div class="brand"><span class="dot"></span> MakanPay <small>platform console</small></div>
+  <nav class="topnav">
+    <a href="/admin.html" class="active">Console</a>
+    <a href="/store.html">Storefront</a>
+    <a href="/pos.html">POS</a>
+  </nav>
+</div>
+
+<div class="wrap">
+  <div class="page-head">
+    <h1>Outlets</h1>
+    <p>Onboard F&amp;B outlets onto the platform, configure their commercial terms, and manage menus and readers.</p>
+  </div>
+
+  <div class="tabs">
+    <button data-tab="outlets" class="active">Outlets</button>
+    <button data-tab="menu">Menu</button>
+    <button data-tab="readers">Readers</button>
+    <button data-tab="config">Configuration</button>
+    <button data-tab="activity">Activity</button>
+  </div>
+
+  <!-- OUTLETS -->
+  <section data-panel="outlets">
+    <div class="card">
+      <div class="card-head">
+        <h2>Connected outlets</h2>
+        <div class="spacer"></div>
+        <button class="btn" id="refreshAll">Refresh status</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Outlet</th><th>Onboarding</th><th>Connected account</th>
+            <th>Status</th><th>Terms</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="outletRows"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Add an outlet</h2></div>
+      <div class="card-body">
+        <div class="grid c4">
+          <label class="field"><span>Name</span><input id="nName" placeholder="Kopi Corner"></label>
+          <label class="field"><span>Type</span>
+            <select id="nType">
+              <option value="restaurant">Restaurant</option>
+              <option value="cafe">Cafe</option>
+              <option value="bar">Bar</option>
+              <option value="hawker">Hawker stall</option>
+            </select>
+          </label>
+          <label class="field"><span>Cuisine</span><input id="nCuisine" placeholder="Local coffee"></label>
+          <label class="field"><span>Icon</span><input id="nEmoji" placeholder="☕" maxlength="4"></label>
+        </div>
+        <button class="btn primary" id="addOutlet">Add outlet</button>
+        <p class="small muted" style="margin:10px 0 0">
+          Creates the platform record only. No Stripe account exists until you onboard it.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- MENU -->
+  <section data-panel="menu" hidden>
+    <div class="card">
+      <div class="card-head">
+        <h2>Menu</h2>
+        <div class="spacer"></div>
+        <select id="menuOutlet" style="width:auto"></select>
+      </div>
+      <table>
+        <thead><tr><th>Item</th><th>Category</th><th>Price</th><th>Status</th><th></th></tr></thead>
+        <tbody id="menuRows"></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Add menu item</h2></div>
+      <div class="card-body">
+        <div class="grid c4">
+          <label class="field"><span>Name</span><input id="pName" placeholder="Laksa"></label>
+          <label class="field"><span>Category</span>
+            <select id="pCategory">
+              <option>Mains</option><option>Sides</option>
+              <option>Drinks</option><option>Desserts</option>
+            </select>
+          </label>
+          <label class="field"><span>Price (S$)</span><input id="pPrice" type="number" step="0.10" placeholder="8.50"></label>
+          <label class="field"><span>Icon</span><input id="pEmoji" placeholder="🍜" maxlength="4"></label>
+        </div>
+        <label class="field"><span>Description</span><input id="pDesc" placeholder="Rich coconut broth, prawns, fish cake"></label>
+        <button class="btn primary" id="addProduct">Add item</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- READERS -->
+  <section data-panel="readers" hidden>
+    <div class="card">
+      <div class="card-head">
+        <h2>Terminal readers</h2>
+        <div class="spacer"></div>
+        <select id="readerOutlet" style="width:auto"></select>
+        <button class="btn" id="refreshReaders">Refresh</button>
+      </div>
+      <table>
+        <thead><tr><th>Label</th><th>Reader ID</th><th>Device</th><th>Type</th><th>Status</th></tr></thead>
+        <tbody id="readerRows"></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Register a reader</h2></div>
+      <div class="card-body">
+        <div class="grid c3">
+          <label class="field"><span>Registration code</span><input id="rCode" placeholder="simulated-s710"></label>
+          <label class="field"><span>Label</span><input id="rLabel" placeholder="Counter 1"></label>
+          <label class="field"><span>&nbsp;</span><button class="btn primary" id="addReader">Register</button></label>
+        </div>
+        <p class="small muted" style="margin:0">
+          Physical S710: <strong>Settings → generate pairing code</strong> (three words).
+          No hardware: use <span class="mono">simulated-s710</span>.
+          Readers belong to a Terminal Location, created automatically per outlet.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONFIG -->
+  <section data-panel="config" hidden>
+    <div class="card">
+      <div class="card-head">
+        <h2>Commercial &amp; statutory terms</h2>
+        <div class="spacer"></div>
+        <select id="cfgOutlet" style="width:auto"></select>
+      </div>
+      <div class="card-body">
+        <div class="grid c3">
+          <label class="field"><span>Platform fee (bps)</span><input id="cFee" type="number"></label>
+          <label class="field"><span>Service charge (bps)</span><input id="cService" type="number"></label>
+          <label class="field"><span>GST (bps)</span><input id="cGst" type="number"></label>
+        </div>
+        <div class="grid c3">
+          <label class="field"><span>Country</span><input id="cCountry" maxlength="2"></label>
+          <label class="field"><span>Currency</span><input id="cCurrency" maxlength="3"></label>
+          <label class="field"><span>Brand colour</span><input id="cColor" type="color"></label>
+        </div>
+        <button class="btn primary" id="saveConfig">Save configuration</button>
+        <div id="cfgPreview" class="small muted" style="margin-top:14px"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>The 70/30 split</h2></div>
+      <div class="card-body small">
+        <p style="margin-top:0">
+          Everything on this screen is the <strong>30%</strong> — configured per client at deployment.
+          Everything behind it is the <strong>70%</strong>: Connect onboarding, direct-charge fund flow,
+          Checkout, server-driven Terminal, pre-auth tabs, refund clawback and reconciliation, all shipped unchanged.
+        </p>
+        <p style="margin-bottom:0" class="muted">
+          Also per-client but set at onboarding time: dashboard mode (Stripe-hosted vs API-based),
+          payout cadence, and enabled payment methods per market.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ACTIVITY -->
+  <section data-panel="activity" hidden>
+    <div class="card">
+      <div class="card-head">
+        <h2>Platform activity</h2>
+        <div class="spacer"></div>
+        <span class="pill info" id="liveDot">live</span>
+      </div>
+      <div class="feed" id="feed"></div>
+    </div>
+  </section>
+</div>
+
+<script src="/admin.js"></script>
+</body>
+</html>
