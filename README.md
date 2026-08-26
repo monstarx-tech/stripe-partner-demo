@@ -1,44 +1,88 @@
-# Partner Solutions Lab — Starter
+# MakanPay
 
-Starter for the [Partner Solutions Lab](https://github.com/jillianchi/partner-solutions-lab): a Stripe Connect platform for restaurant/hotel merchants. The routes below are scaffolded but the actual Stripe calls are left as TODOs for you to implement — see the lab guide for step-by-step instructions per task.
+**Embedded payments for F&B platforms.** Online ordering, in-person Terminal, and
+running tabs on one Stripe Connect backbone — deployable in four weeks.
 
-## Setup
+Built for the Stripe Partner Solutions Lab. Track A patterns implemented and
+documented as a Track B accelerator for the Singapore F&B vertical.
+
+---
+
+## What it does
+
+| Surface | Route | Proves |
+|---|---|---|
+| **Platform console** | `/admin.html` | Connect onboarding (both modes), menu CMS, reader fleet, per-outlet config, reconciliation |
+| **Customer storefront** | `/store.html` | Checkout Session, direct charge, PayNow, fee-split receipt |
+| **POS** | `/pos.html` | Server-driven Terminal, on-reader tipping, pre-auth tabs, refunds, live API trace |
+
+One order ledger underneath all three, so a dine-in ticket and an online order price
+identically.
+
+## Architecture in one line
+
+**Direct charges on Stripe Connect.** The outlet is merchant of record; funds settle
+into its own balance and the platform's `application_fee_amount` is collected
+automatically. No transfer step, no platform treasury.
+
+## Vertical logic
+
+- **Running tab pre-auth with overage** — hold now, settle later against a card that
+  left hours ago. No Customer object required.
+- **Refund with fee clawback** — `refund_application_fee`; `reverse_transfer` is
+  irrelevant with direct charges.
+- **Singapore bill composition** — service charge, then GST on the inclusive amount.
+- **On-reader tipping** — tips carry a **0% platform fee**, by construction.
+- **Aggregator boundary** — revenue that never touched Stripe, shown as exactly that.
+
+## Quick start
 
 ```bash
-git clone https://github.com/jillianchi/partner-solutions-lab-starter.git
-cd partner-solutions-lab-starter
 npm install
-cp .env.example .env
-# Add your Stripe secret key to .env
-npm start
+cp .env.example .env      # add your sk_test_ / pk_test_ keys
+npm run dev
 ```
 
-Server runs on `http://localhost:3000`. Hit `/health` to confirm it's up.
+Open http://localhost:3000/admin.html — two Singapore outlets are seeded with menus.
 
-Merchant data persists automatically in `lab.db` (SQLite, auto-created on first run).
+Onboard an outlet (API mode reaches `charges_enabled` with no browser), register
+`simulated-s710` as a reader, then charge from the POS.
 
-No UI is included here — every task is testable with curl/Postman against the routes below. Building a frontend on top is a reasonable extension if your workshop calls for one, but it isn't required to complete the lab tasks.
+Webhooks, locally:
+```bash
+stripe listen --forward-connect-to localhost:3000/webhooks
+```
+`--forward-connect-to`, not `--forward-to`. Every charge here is a direct charge on a
+connected account; plain `--forward-to` sees only platform events.
 
-## File map
+## Deployment
 
-| File | Lab task |
-|------|----------|
-| `server/routes/merchants.js` | Register a new merchant on the platform (no Stripe account yet) |
-| `server/routes/accounts.js` | Task 2.1 — Connected account creation + onboarding + status |
-| `server/routes/payments.js` | Task 2.2 — Checkout Session (direct charge) |
-| `server/routes/terminal.js` | Task 2.3 — Terminal payment (server-driven) |
-| `server/routes/webhooks.js` | Task 2.4 — Webhook handler |
-| `server/routes/refunds.js` | Task 3A.1 — Refund with clawback |
-| `server/routes/terminal.js` | Task 3A.2 — Pre-authorization |
+Railway, with a volume mounted at `/data` and `DB_PATH=/data/lab.db` — without it the
+database is wiped on every deploy. Set `BASE_URL` to the public URL; Connect
+onboarding returns and Checkout redirects both depend on it.
 
-## Terminal (Task 2.3) — server-driven integration
+The server refuses to boot on an `sk_live_` key.
 
-No client SDK — your caller (standing in for a restaurant/hotel's existing PMS/POS system) drives a Stripe Terminal reader entirely via this API. To test without physical hardware, register a simulated reader using `simulated-s710`, `simulated-s700`, or `simulated-wpe` as the registration code, then call `POST /terminal/simulate-card` (wraps Stripe's `test_helpers` present-payment-method endpoint) instead of tapping a real card.
+## Documentation
 
-## Pre-auth
+| | |
+|---|---|
+| [DECISIONS.md](DECISIONS.md) | The four Connect decisions, vertical logic, the 70/30 split |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | L100 landscape, L200 fund flow, L300 sequences |
+| [docs/RUNBOOK.md](docs/RUNBOOK.md) | Onboarding, readers, payouts, disputes, webhook health |
+| [docs/RATE-CARD.md](docs/RATE-CARD.md) | Commercial terms and scope boundaries |
+| [docs/PITCH.md](docs/PITCH.md) | 5-minute solution pitch |
+| [postman/](postman/) | 35 requests across 10 folders |
 
-`server/routes/terminal.js` extends the base Task 2.3 flow with `manualCapture` (hold now, capture later), plus `capture`, `saved-card`, and `off-session-charge` endpoints. The idea: hold an amount up front, let the final total grow (more rounds added to a tab, more nights added to a stay), then on close capture the final total and off-session-charge any overage to the card the reader collected.
+## Lab coverage
 
-## Test data
+| Task | |
+|---|---|
+| 2.1 Connected accounts | ✅ v2 Accounts API, dual onboarding modes |
+| 2.2 Online payment | ✅ Checkout, direct charge, PayNow |
+| 2.3 Terminal payment | ✅ Server-driven, on-reader tipping |
+| 2.4 Reconciliation webhook | ✅ Built — polling cannot see disputes |
+| 3A.1 Refund with clawback | ✅ Fee refund confirmed on Stripe |
+| 3A.2 Pre-authorization | ✅ Both capture paths, plus off-session overage |
 
-`server/db.js` auto-seeds two merchants (The Golden Fork, Harbour Bites) into SQLite on first run if the `merchants` table is empty. Once you implement the routes above, connected accounts and Terminal locations get created lazily and cached back onto each merchant's row — no manual copying of Stripe IDs required.
+Test mode only.

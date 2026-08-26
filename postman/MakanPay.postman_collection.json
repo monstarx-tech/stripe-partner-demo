@@ -1,0 +1,1022 @@
+{
+  "info": {
+    "name": "MakanPay \u2014 F&B Payments Accelerator",
+    "description": "Embedded payments for F&B platforms on Stripe Connect.\n\nFund flow is DIRECT CHARGES throughout \u2014 every Stripe call is scoped to the connected account and the outlet is merchant of record.\n\nSet `baseUrl` in the environment. Run folders in order: Platform \u2192 Connect \u2192 Menu \u2192 Online \u2192 Terminal \u2192 Tabs \u2192 Refunds \u2192 Reconciliation.\n\nRequests capture ids into collection variables, so a folder can be run top-to-bottom without copying values by hand.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "merchantId",
+      "value": "merchant_002"
+    },
+    {
+      "key": "readerId",
+      "value": ""
+    },
+    {
+      "key": "paymentIntentId",
+      "value": ""
+    },
+    {
+      "key": "orderId",
+      "value": ""
+    },
+    {
+      "key": "tabId",
+      "value": ""
+    },
+    {
+      "key": "sessionId",
+      "value": ""
+    },
+    {
+      "key": "productA",
+      "value": "merchant_002_p04"
+    },
+    {
+      "key": "productB",
+      "value": "merchant_002_p10"
+    }
+  ],
+  "item": [
+    {
+      "name": "0 \u00b7 Platform",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "Confirms the server is up and reports the configured BASE_URL."
+          }
+        },
+        {
+          "name": "List outlets",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/platform/merchants",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "platform",
+                "merchants"
+              ]
+            },
+            "description": "Local data only \u2014 no Stripe round-trip. Includes menu and reader counts."
+          }
+        },
+        {
+          "name": "Add an outlet",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/merchants",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "merchants"
+              ]
+            },
+            "description": "Platform record only. No Stripe account exists until you onboard it.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Kopi Corner\",\n  \"type\": \"cafe\",\n  \"cuisine\": \"Local coffee\",\n  \"logo_emoji\": \"\\u2615\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update outlet config (the 30%)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/platform/merchants/{{merchantId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "platform",
+                "merchants",
+                "{{merchantId}}"
+              ]
+            },
+            "description": "The per-client configuration surface: fee rate, statutory rates, currency, branding.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fee_bps\": 250,\n  \"service_charge_bps\": 1000,\n  \"gst_bps\": 900\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "1 \u00b7 Connect (Task 2.1)",
+      "item": [
+        {
+          "name": "Create connected account \u2014 Stripe-hosted",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts"
+              ]
+            },
+            "description": "v2 Accounts API. dashboard 'express' means STRIPE owns KYC \u2014 the platform cannot prefill it.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"merchantId\": \"{{merchantId}}\",\n  \"dashboard\": \"express\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Create connected account \u2014 API-based",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts"
+              ]
+            },
+            "description": "dashboard 'none' means the PLATFORM owns KYC and can submit it. No merchant dashboard exists.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"merchantId\": \"{{merchantId}}\",\n  \"dashboard\": \"none\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Hosted onboarding link",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/{{merchantId}}/onboard?format=json",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "{{merchantId}}",
+                "onboard"
+              ],
+              "query": [
+                {
+                  "key": "format",
+                  "value": "json"
+                }
+              ]
+            },
+            "description": "Creates a single-use Account Link. Omit format=json and the endpoint redirects."
+          }
+        },
+        {
+          "name": "Submit KYC (API onboarding only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/{{merchantId}}/prefill-test",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "{{merchantId}}",
+                "prefill-test"
+              ]
+            },
+            "description": "Test-mode SG values. Correctly refused on an 'express' account.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          }
+        },
+        {
+          "name": "Account status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/{{merchantId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "{{merchantId}}",
+                "status"
+              ]
+            },
+            "description": "charges_enabled, payouts_enabled, details_submitted, plus an Express Dashboard link where one exists."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2 \u00b7 Menu",
+      "item": [
+        {
+          "name": "List menu",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/platform/merchants/{{merchantId}}/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "platform",
+                "merchants",
+                "{{merchantId}}",
+                "products"
+              ]
+            },
+            "description": "Shared by the storefront and the POS. Ordered Mains, Sides, Drinks, Desserts."
+          }
+        },
+        {
+          "name": "Add menu item",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/platform/merchants/{{merchantId}}/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "platform",
+                "merchants",
+                "{{merchantId}}",
+                "products"
+              ]
+            },
+            "description": "unit_amount is in cents.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Laksa\",\n  \"category\": \"Mains\",\n  \"unit_amount\": 850,\n  \"image_emoji\": \"\\ud83c\\udf5c\",\n  \"description\": \"Rich coconut broth, prawns, fish cake\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3 \u00b7 Online payment (Task 2.2)",
+      "item": [
+        {
+          "name": "Create Checkout Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/checkout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "checkout"
+              ]
+            },
+            "description": "Direct charge on the connected account. application_fee_amount is 2.5% of the total, excluding tip. Service charge and GST ride as their own line items. Offers card and PayNow.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"merchantId\": \"{{merchantId}}\",\n  \"items\": [\n    {\n      \"productId\": \"{{productA}}\",\n      \"quantity\": 1\n    },\n    {\n      \"productId\": \"{{productB}}\",\n      \"quantity\": 2\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json();",
+                  "if (d.sessionId) pm.collectionVariables.set('sessionId', d.sessionId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Checkout status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/checkout/status?session_id={{sessionId}}&merchantId={{merchantId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "checkout",
+                "status"
+              ],
+              "query": [
+                {
+                  "key": "session_id",
+                  "value": "{{sessionId}}"
+                },
+                {
+                  "key": "merchantId",
+                  "value": "{{merchantId}}"
+                }
+              ]
+            },
+            "description": "Reconciles the order on read. The reference build polls here rather than waiting on a webhook."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4 \u00b7 Terminal (Task 2.3)",
+      "item": [
+        {
+          "name": "Register a reader",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/terminal/readers/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "terminal",
+                "readers",
+                "register"
+              ]
+            },
+            "description": "Physical S710: Settings \u2192 generate pairing code. Creates the outlet's Terminal Location on first use.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"merchantId\": \"{{merchantId}}\",\n  \"registrationCode\": \"simulated-s710\",\n  \"label\": \"Counter 1\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json();",
+                  "if (d.readerId) pm.collectionVariables.set('readerId', d.readerId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List readers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/terminal/readers?merchantId={{merchantId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "terminal",
+                "readers"
+              ],
+              "query": [
+                {
+                  "key": "merchantId",
+                  "value": "{{merchantId}}"
+                }
+              ]
+            },
+            "description": "Readers live on the CONNECTED account, not the platform."
+          }
+        },
+        {
+          "name": "Create card-present PaymentIntent",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/terminal/payment-intent",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "terminal",
+                "payment-intent"
+              ]
+            },
+            "description": "Prices server-side and writes to the shared order ledger.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"merchantId\": \"{{merchantId}}\",\n  \"items\": [\n    {\n      \"productId\": \"{{productA}}\",\n      \"quantity\": 1\n    }\n  ],\n  \"tableNumber\": \"12\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json();",
+                  "if (d.paymentIntentId) pm.collectionVariables.set('paymentIntentId', d.paymentIntentId);",
+                  "if (d.orderId) pm.collectionVariables.set('orderId', d.orderId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Push to reader",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/terminal/process",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "terminal",
+                "process"
+              ]
+            },
+            "description": "The step that replaces the client SDK. tipEligibleAmount turns on on-reader tipping against the PRE-TIP total \u2014 the tip raises the PI amount but not application_fee_amount.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"merchantId\": \"{{merchantId}}\",\n  \"readerId\": \"{{readerId}}\",\n  \"paymentIntentId\": \"{{paymentIntentId}}\",\n  \"tipEligibleAmount\": 5000\n}"
+            }
+          }
+        },
+        {
+          "name": "Simulate a card tap",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/terminal/simulate-card",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "terminal",
+                "simulate-card"
+              ]
+            },
+            "description": "SIMULATED readers only. A physical S710 needs a real tap with a physical Stripe test card.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"merchantId\": \"{{merchantId}}\",\n  \"readerId\": \"{{readerId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "PaymentIntent status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/terminal/payment-intent/{{paymentIntentId}}/status?merchantId={{merchantId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "terminal",
+                "payment-intent",
+                "{{paymentIntentId}}",
+                "status"
+              ],
+              "query": [
+                {
+                  "key": "merchantId",
+                  "value": "{{merchantId}}"
+                }
+              ]
+            },
+            "description": "Poll after pushing. Reconciles the order and reports any on-reader tip."
+          }
+        }
+      ]
+    },
+    {
+      "name": "5 \u00b7 Running tabs (Task 3A.2)",
+      "item": [
+        {
+          "name": "Open a tab",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tabs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tabs"
+              ]
+            },
+            "description": "capture_method 'manual' holds; setup_future_usage 'off_session' makes the tap leave a reusable card behind. Pushed with process_config.allow_redisplay 'always'.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"merchantId\": \"{{merchantId}}\",\n  \"holdAmount\": 6000,\n  \"readerId\": \"{{readerId}}\",\n  \"label\": \"Table 7\",\n  \"tableNumber\": \"7\",\n  \"items\": [\n    {\n      \"productId\": \"{{productB}}\",\n      \"quantity\": 2\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json();",
+                  "if (d.id) pm.collectionVariables.set('tabId', d.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Tab status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tabs/{{tabId}}?merchantId={{merchantId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tabs",
+                "{{tabId}}"
+              ],
+              "query": [
+                {
+                  "key": "merchantId",
+                  "value": "{{merchantId}}"
+                }
+              ]
+            },
+            "description": "holdStatus 'requires_capture' means the guest has tapped and the hold is live."
+          }
+        },
+        {
+          "name": "Add a round",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tabs/{{tabId}}/items",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tabs",
+                "{{tabId}}",
+                "items"
+              ]
+            },
+            "description": "Reprices the order from its line items, so the running total is always the real bill.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"merchantId\": \"{{merchantId}}\",\n  \"items\": [\n    {\n      \"productId\": \"{{productB}}\",\n      \"quantity\": 2\n    }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Close the tab",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tabs/{{tabId}}/close",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tabs",
+                "{{tabId}}",
+                "close"
+              ]
+            },
+            "description": "Captures min(final, hold) \u2014 capturing less releases the remainder \u2014 then, if the bill ran over, reads the saved card and off-session-charges the difference. Returns a per-step trace.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"merchantId\": \"{{merchantId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List tabs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tabs?merchantId={{merchantId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tabs"
+              ],
+              "query": [
+                {
+                  "key": "merchantId",
+                  "value": "{{merchantId}}"
+                }
+              ]
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "6 \u00b7 Pre-auth primitives",
+      "item": [
+        {
+          "name": "Capture a hold",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/terminal/payment-intent/{{paymentIntentId}}/capture",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "terminal",
+                "payment-intent",
+                "{{paymentIntentId}}",
+                "capture"
+              ]
+            },
+            "description": "amount_to_capture may be LESS than the hold; the remainder is released.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"merchantId\": \"{{merchantId}}\",\n  \"amount\": 4000\n}"
+            }
+          }
+        },
+        {
+          "name": "Read the saved card",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/terminal/payment-intent/{{paymentIntentId}}/saved-card?merchantId={{merchantId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "terminal",
+                "payment-intent",
+                "{{paymentIntentId}}",
+                "saved-card"
+              ],
+              "query": [
+                {
+                  "key": "merchantId",
+                  "value": "{{merchantId}}"
+                }
+              ]
+            },
+            "description": "latest_charge.payment_method_details.card_present.generated_card. Exists only because setup_future_usage was set."
+          }
+        },
+        {
+          "name": "Off-session charge",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/terminal/off-session-charge",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "terminal",
+                "off-session-charge"
+              ]
+            },
+            "description": "off_session true, confirm true. No Customer object \u2014 the raw PaymentMethod id is enough.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"merchantId\": \"{{merchantId}}\",\n  \"amount\": 1500,\n  \"paymentMethodId\": \"pm_xxx\",\n  \"description\": \"Tab overage\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7 \u00b7 Refunds (Task 3A.1)",
+      "item": [
+        {
+          "name": "Refund with fee clawback",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/refunds",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "refunds"
+              ]
+            },
+            "description": "Direct charges: there is no transfer to reverse, so reverse_transfer is irrelevant. refund_application_fee true means the platform gives up its fee alongside the outlet.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"merchantId\": \"{{merchantId}}\",\n  \"orderId\": \"{{orderId}}\",\n  \"refundApplicationFee\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Partial refund, platform keeps its fee",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/refunds",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "refunds"
+              ]
+            },
+            "description": "Arguable where the outlet got the order wrong and the platform processed correctly.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"merchantId\": \"{{merchantId}}\",\n  \"orderId\": \"{{orderId}}\",\n  \"amount\": 2000,\n  \"refundApplicationFee\": false\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8 \u00b7 Orders & reconciliation",
+      "item": [
+        {
+          "name": "Recent orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders?merchantId={{merchantId}}&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders"
+              ],
+              "query": [
+                {
+                  "key": "merchantId",
+                  "value": "{{merchantId}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "One ledger across web, POS and aggregator channels."
+          }
+        },
+        {
+          "name": "Order detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{orderId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "{{orderId}}"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Reconciliation",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/platform/reconciliation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "platform",
+                "reconciliation"
+              ]
+            },
+            "description": "Gross, platform revenue, effective take rate, net to outlets, refunds \u2014 by outlet and by channel. Aggregator-channel revenue is shown explicitly as NOT flowing through Stripe."
+          }
+        },
+        {
+          "name": "Activity feed",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/platform/events?limit=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "platform",
+                "events"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "9 \u00b7 Diagnostics",
+      "item": [
+        {
+          "name": "Terminal preflight",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/smoke/preflight?merchantId={{merchantId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "smoke",
+                "preflight"
+              ],
+              "query": [
+                {
+                  "key": "merchantId",
+                  "value": "{{merchantId}}"
+                }
+              ]
+            },
+            "description": "Answers 'what is blocking me right now' without touching the reader."
+          }
+        },
+        {
+          "name": "S710 smoke test",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/smoke/s710",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "smoke",
+                "s710"
+              ]
+            },
+            "description": "Location \u2192 register \u2192 PaymentIntent \u2192 push, with a numbered trace so a failure names its own step.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"merchantId\": \"{{merchantId}}\",\n  \"registrationCode\": \"simulated-s710\",\n  \"amount\": 100\n}"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
