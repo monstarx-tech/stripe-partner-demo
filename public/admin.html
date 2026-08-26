@@ -27,6 +27,7 @@
     <button data-tab="menu">Menu</button>
     <button data-tab="readers">Readers</button>
     <button data-tab="config">Configuration</button>
+    <button data-tab="money">Reconciliation</button>
     <button data-tab="activity">Activity</button>
   </div>
 
@@ -175,6 +176,40 @@
           Also per-client but set at onboarding time: dashboard mode (Stripe-hosted vs API-based),
           payout cadence, and enabled payment methods per market.
         </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- RECONCILIATION -->
+  <section data-panel="money" hidden>
+    <div class="card">
+      <div class="card-head"><h2>Platform revenue</h2><div class="spacer"></div>
+        <button class="btn" id="reloadMoney">Refresh</button></div>
+      <div class="card-body">
+        <div class="grid c4" id="kpis"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>By outlet</h2></div>
+      <table>
+        <thead><tr><th>Outlet</th><th>Orders</th><th>Gross</th><th>Platform fee</th><th>Net to outlet</th><th>Payouts</th></tr></thead>
+        <tbody id="moneyRows"></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>By channel</h2></div>
+      <table>
+        <thead><tr><th>Channel</th><th>Orders</th><th>Gross</th><th>Platform fee</th><th>Flows through Stripe</th></tr></thead>
+        <tbody id="channelRows"></tbody>
+      </table>
+      <div class="card-body small muted" style="border-top:1px solid var(--border)">
+        <strong>Not everything flows through Stripe.</strong> Delivery aggregators and OTAs collect
+        payment themselves and remit net proceeds separately — those orders carry no PaymentIntent
+        and no platform fee, and need their own reconciliation path against the aggregator's
+        settlement file. Assuming all revenue moves through Stripe is the most common scoping
+        error in an F&B platform engagement.
       </div>
     </div>
   </section>

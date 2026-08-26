@@ -183,4 +183,66 @@ router.get('/events', (req, res) => {
   });
 });
 
+// GET /platform/reconciliation?merchantId=
+// What the platform actually earned, and — just as importantly — which revenue
+// never touched Stripe at all.
+//
+// Module 1 plants this as a scoping trap: delivery aggregators (GrabFood,
+// Foodpanda) and OTAs collect payment themselves and remit net proceeds
+// separately. Those orders have no PaymentIntent and no application fee, and
+// assuming otherwise is how a reconciliation design goes wrong. We record them
+// as a channel so the gap is explicit rather than silently missing.
+router.get('/reconciliation', (req, res) => {
+  const merchants = db.merchants.all()
+    .filter(m => !req.query.merchantId || m.id === req.query.merchantId);
+
+  const blank = () => ({ orders: 0, gross: 0, platformFee: 0, netToMerchant: 0, refunded: 0 });
+  const totals = blank();
+  const byChannel = {};
+
+  const rows = merchants.map(m => {
+    const orders = db.orders.where('merchant_id = ?', m.id);
+    const summary = blank();
+
+    for (const o of orders) {
+      const settled = ['paid', 'refunded', 'partially_refunded'].includes(o.status);
+      if (!settled) continue;
+
+      const channel = o.channel || 'web';
+      byChannel[channel] = byChannel[channel] || blank();
+
+      // Aggregator revenue is recognised but carries no Stripe fee — the money
+      // never flowed through us.
+      const fee = channel === 'aggregator' ? 0 : (o.application_fee || 0);
+      const refunded = o.status === 'refunded' ? o.amount : 0;
+
+      for (const bucket of [summary, totals, byChannel[channel]]) {
+        bucket.orders += 1;
+        bucket.gross += o.amount;
+        bucket.platformFee += fee;
+        bucket.netToMerchant += o.amount - fee;
+        bucket.refunded += refunded;
+      }
+    }
+
+    return {
+      merchantId: m.id,
+      name: m.name,
+      logo_emoji: m.logo_emoji,
+      currency: m.currency,
+      feeBps: m.fee_bps,
+      accountId: m.stripe_account_id,
+      payoutSchedule: m.payout_schedule,
+      ...summary,
+    };
+  });
+
+  res.json({
+    totals,
+    byChannel,
+    merchants: rows,
+    note: 'Aggregator-channel orders are recorded for revenue but carry no Stripe fee — those funds are collected by the aggregator and remitted separately. They require their own reconciliation path.',
+  });
+});
+
 module.exports = router;

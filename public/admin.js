@@ -40,6 +40,7 @@ $$('.tabs button').forEach(btn => btn.onclick = () => {
   if (btn.dataset.tab === 'menu') loadMenu();
   if (btn.dataset.tab === 'readers') loadReaders();
   if (btn.dataset.tab === 'config') fillConfig();
+  if (btn.dataset.tab === 'money') loadMoney();
 });
 
 // ---- outlets ----
@@ -300,6 +301,47 @@ async function pollEvents() {
     }
   } catch { /* transient */ }
 }
+
+// ---- reconciliation ----
+async function loadMoney() {
+  const d = await api('/platform/reconciliation');
+  const t = d.totals;
+
+  const kpi = (label, value, sub) =>
+    `<div><div class="small muted">${label}</div>
+     <div style="font-size:22px;font-weight:700;letter-spacing:-.02em">${value}</div>
+     <div class="small muted">${sub}</div></div>`;
+
+  $('#kpis').innerHTML =
+    kpi('Gross processed', money(t.gross), `${t.orders} settled orders`) +
+    kpi('Platform revenue', money(t.platformFee), t.gross ? `${((t.platformFee / t.gross) * 100).toFixed(2)}% effective` : '—') +
+    kpi('Net to outlets', money(t.netToMerchant), 'settled to connected accounts') +
+    kpi('Refunded', money(t.refunded), 'fees clawed back with it');
+
+  $('#moneyRows').innerHTML = d.merchants.map(m => `
+    <tr>
+      <td><div class="outlet"><div class="emoji">${esc(m.logo_emoji || '🍽️')}</div>
+        <div><strong>${esc(m.name)}</strong><span class="muted small mono">${esc(m.accountId || 'not onboarded')}</span></div></div></td>
+      <td class="mono">${m.orders}</td>
+      <td class="mono">${money(m.gross)}</td>
+      <td class="mono">${money(m.platformFee)} <span class="muted small">${pct(m.feeBps)}</span></td>
+      <td class="mono">${money(m.netToMerchant)}</td>
+      <td><span class="pill ${m.payoutSchedule === 'manual' ? 'info' : 'off'}">${esc(m.payoutSchedule)}</span></td>
+    </tr>`).join('');
+
+  const channels = Object.entries(d.byChannel);
+  $('#channelRows').innerHTML = channels.length ? channels.map(([name, c]) => {
+    const viaStripe = name !== 'aggregator';
+    return `<tr>
+      <td><span class="pill ${viaStripe ? 'info' : 'warn'}">${esc(name)}</span></td>
+      <td class="mono">${c.orders}</td>
+      <td class="mono">${money(c.gross)}</td>
+      <td class="mono">${money(c.platformFee)}</td>
+      <td>${viaStripe ? '<span class="pill ok">yes</span>' : '<span class="pill warn">no — remitted separately</span>'}</td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="5" class="empty">No settled orders yet.</td></tr>';
+}
+$('#reloadMoney').onclick = loadMoney;
 
 loadMerchants().then(() => {
   merchants.filter(m => m.stripe_account_id).forEach(m => refreshStatus(m.id));
