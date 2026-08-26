@@ -1,7 +1,7 @@
 {
   "name": "partner-solutions-lab-starter",
   "version": "0.1.0",
-  "description": "Starter server for the Stripe Partner Solutions Lab",
+  "description": "MakanPay — embedded payments accelerator for F&B platforms (Stripe Connect + Terminal)",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
@@ -15,5 +15,8 @@
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
