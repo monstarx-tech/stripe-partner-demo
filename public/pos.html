@@ -5,21 +5,98 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MakanPay — POS</title>
 <link rel="stylesheet" href="/app.css">
+<style>
+  .pos { display: grid; grid-template-columns: 1fr 300px 300px; gap: 14px; align-items: start; }
+  .cat-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 16px 0 8px; }
+  .cat-title:first-child { margin-top: 0; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+  .tile {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 8px; cursor: pointer; font: inherit; color: inherit; text-align: center;
+  }
+  .tile:hover { border-color: var(--accent); }
+  .tile:active { background: var(--accent-soft); }
+  .tile .ico { font-size: 20px; }
+  .tile .nm { font-weight: 600; font-size: 12px; margin: 3px 0 1px; line-height: 1.25; }
+  .tile .pr { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+  .ticket { position: sticky; top: 70px; }
+  .tl { display: flex; align-items: center; gap: 6px; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .tl .nm { flex: 1; }
+  .tl button { width: 20px; height: 20px; border-radius: 4px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; font: inherit; line-height: 1; }
+  .sum { font-size: 13px; padding-top: 8px; }
+  .sum .row { display: flex; justify-content: space-between; padding: 2px 0; }
+  .sum .row.grand { font-weight: 700; font-size: 16px; border-top: 1px solid var(--border); margin-top: 6px; padding-top: 7px; }
+
+  .trace { position: sticky; top: 70px; }
+  .trace-body { max-height: 520px; overflow-y: auto; font-family: var(--mono); font-size: 11px; }
+  .tr { padding: 6px 12px; border-bottom: 1px solid var(--border); }
+  .tr:last-child { border-bottom: none; }
+  .tr .t { color: var(--muted); }
+  .tr .m { color: var(--accent); font-weight: 600; }
+  .tr .d { color: var(--text); word-break: break-all; }
+  .tr.err .m { color: var(--danger); }
+  .tr.ok .m { color: var(--ok); }
+
+  .stage { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 8px; background: var(--bg); margin-bottom: 10px; font-size: 13px; }
+  .stage .spin { width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: sp .7s linear infinite; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+  @media (max-width: 1100px) { .pos { grid-template-columns: 1fr; } .ticket, .trace { position: static; } }
+</style>
 </head>
 <body>
 <div class="topbar">
-  <div class="brand"><span class="dot"></span> MakanPay <small>pos</small></div>
+  <div class="brand"><span class="dot"></span> MakanPay <small>point of sale</small></div>
   <nav class="topnav">
     <a href="/admin.html">Console</a>
     <a href="/store.html">Storefront</a>
     <a href="/pos.html" class="active">POS</a>
   </nav>
 </div>
+
 <div class="wrap">
-  <div class="card"><div class="card-body empty">
-    <h2 style="margin:0 0 6px">POS</h2>
-    <p style="margin:0">Server-driven Terminal, tabs and refunds — arriving in Phase 3.</p>
-  </div></div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-body" style="display:flex; gap:12px; align-items:end; flex-wrap:wrap">
+      <label class="field" style="margin:0; width:190px"><span>Outlet</span><select id="outlet"></select></label>
+      <label class="field" style="margin:0; width:230px"><span>Reader</span><select id="reader"></select></label>
+      <label class="field" style="margin:0; width:110px"><span>Table</span><input id="table" placeholder="12"></label>
+      <label class="field" style="margin:0; width:130px"><span>On-reader tip</span>
+        <select id="tipping"><option value="1">Prompt guest</option><option value="0">No prompt</option></select>
+      </label>
+      <button class="btn" id="refresh">Refresh readers</button>
+    </div>
+  </div>
+
+  <div class="pos">
+    <div id="menu"></div>
+
+    <div class="ticket">
+      <div class="card" style="margin:0">
+        <div class="card-head"><h2>Ticket</h2><div class="spacer"></div><span class="pill off" id="tCount">0</span></div>
+        <div class="card-body">
+          <div id="stage"></div>
+          <div id="lines"><p class="muted small" style="margin:0">Tap items to build the ticket.</p></div>
+          <div class="sum" id="sum" hidden></div>
+          <div class="btn-row" style="margin-top:12px">
+            <button class="btn primary" id="charge" style="flex:1; justify-content:center" disabled>Charge</button>
+            <button class="btn" id="clear">Clear</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="trace">
+      <div class="card" style="margin:0">
+        <div class="card-head"><h2>API trace</h2><div class="spacer"></div>
+          <button class="btn" id="clearTrace" style="padding:3px 8px; font-size:11px">Clear</button></div>
+        <div class="trace-body" id="trace">
+          <div class="tr"><span class="t">ready</span> <span class="d">server-driven — no client SDK</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
+
+<script src="/pos.js"></script>
 </body>
 </html>

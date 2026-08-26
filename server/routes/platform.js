@@ -16,6 +16,9 @@ router.get('/merchants', (req, res) => {
   res.json({ merchants: db.merchants.all().map(m => ({
     ...m,
     product_count: db.products.where('merchant_id = ?', m.id).length,
+    // Lets the POS default to an outlet that can actually take a payment,
+    // without a Stripe round-trip per merchant on page load.
+    reader_count: db.readers.where('merchant_id = ?', m.id).length,
   })) });
 });
 
