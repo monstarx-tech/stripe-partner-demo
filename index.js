@@ -26,6 +26,7 @@ app.use('/refunds', require('./server/routes/refunds'));
 app.use('/smoke', require('./server/routes/smoke').router);
 app.use('/platform', require('./server/routes/platform'));
 app.use('/orders', require('./server/routes/orders').router);
+app.use('/tabs', require('./server/routes/tabs'));
 
 app.get('/health', (req, res) => res.json({
   status: 'ok',

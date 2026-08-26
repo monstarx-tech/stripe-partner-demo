@@ -282,4 +282,124 @@ router.get('/payment-intent/:id/status', async (req, res) => {
   }
 });
 
+// POST /terminal/payment-intent/:id/capture
+// Capture a pre-authorised PaymentIntent for the real total, which may be LESS
+// than the amount held. Capturing less releases the remainder of the hold.
+router.post('/payment-intent/:id/capture', async (req, res) => {
+  const merchant = requireMerchantWithAccount(req, res);
+  if (!merchant) return;
+  const { amount } = req.body;
+
+  try {
+    const pi = await stripe.paymentIntents.capture(
+      req.params.id,
+      amount ? { amount_to_capture: parseInt(amount, 10) } : {},
+      onAccount(merchant),
+    );
+
+    logEvent({
+      merchantId: merchant.id,
+      kind: 'terminal.capture',
+      message: `Captured ${formatAmount(pi.amount_received, pi.currency)} of a ${formatAmount(pi.amount, pi.currency)} hold`,
+      payload: { paymentIntentId: pi.id, captured: pi.amount_received },
+    });
+
+    res.json({ status: pi.status, amountCaptured: pi.amount_received, currency: pi.currency });
+  } catch (err) {
+    console.error('Capture failed:', describeStripeError(err));
+    res.status(400).json(describeStripeError(err));
+  }
+});
+
+// GET /terminal/payment-intent/:id/saved-card
+// Read the reusable card the reader tap generated. This only exists because the
+// PaymentIntent was created with setup_future_usage — a card-present tap does
+// not otherwise leave anything chargeable behind.
+//
+// No Customer object is involved: the raw PaymentMethod id is enough.
+router.get('/payment-intent/:id/saved-card', async (req, res) => {
+  const merchant = requireMerchantWithAccount(req, res);
+  if (!merchant) return;
+
+  try {
+    const pi = await stripe.paymentIntents.retrieve(
+      req.params.id, { expand: ['latest_charge'] }, onAccount(merchant),
+    );
+
+    const details = pi.latest_charge && pi.latest_charge.payment_method_details;
+    const generated = details && details.card_present && details.card_present.generated_card;
+
+    if (!generated) {
+      return res.status(400).json({
+        error: 'No saved card yet — the reader has not confirmed the tap, or the PaymentIntent was created without setup_future_usage.',
+        paymentIntentStatus: pi.status,
+      });
+    }
+
+    res.json({
+      savedPaymentMethodId: generated,
+      brand: details.card_present.brand,
+      last4: details.card_present.last4,
+    });
+  } catch (err) {
+    res.status(400).json(describeStripeError(err));
+  }
+});
+
+// POST /terminal/off-session-charge
+// Charge a previously-saved card with the guest gone. This is what covers a tab
+// that ran past its hold: the reader collected the card hours ago, the guest has
+// left, and the platform still needs the difference.
+router.post('/off-session-charge', async (req, res) => {
+  const merchant = requireMerchantWithAccount(req, res);
+  if (!merchant) return;
+  const { amount, paymentMethodId, description, orderId } = req.body;
+
+  if (!amount || !paymentMethodId) {
+    return res.status(400).json({ error: 'amount and paymentMethodId are required' });
+  }
+
+  const charge = parseInt(amount, 10);
+  const fee = applicationFee({ total: charge, tip: 0, feeBps: merchant.fee_bps || config.platform.feeBps });
+
+  try {
+    const pi = await stripe.paymentIntents.create(
+      {
+        amount: charge,
+        currency: merchant.currency || config.platform.currency,
+        payment_method: paymentMethodId,
+        // off_session tells Stripe the cardholder is NOT here to authenticate.
+        // confirm charges immediately in the same call.
+        off_session: true,
+        confirm: true,
+        application_fee_amount: fee,
+        description: description || `${merchant.name} — tab overage`,
+        metadata: { merchant_id: merchant.id, channel: 'pos', kind: 'overage', ...(orderId ? { order_id: orderId } : {}) },
+      },
+      { ...onAccount(merchant), idempotencyKey: idemKey('offsession', orderId || paymentMethodId, String(charge)) },
+    );
+
+    logEvent({
+      merchantId: merchant.id,
+      orderId: orderId || '',
+      kind: 'terminal.off_session_charge',
+      message: `Off-session charge ${formatAmount(charge, pi.currency)} — ${pi.status}`,
+      payload: { paymentIntentId: pi.id, applicationFee: fee },
+    });
+
+    res.json({ paymentIntentId: pi.id, status: pi.status, amount: charge, applicationFee: fee });
+  } catch (err) {
+    // An off-session charge can be declined for authentication precisely
+    // because nobody is there to authenticate. Surface that plainly.
+    const described = describeStripeError(err);
+    console.error('Off-session charge failed:', described);
+    res.status(400).json({
+      ...described,
+      ...(err.code === 'authentication_required'
+        ? { hint: 'The issuer wants SCA. In production, notify the guest to complete payment on a hosted page.' }
+        : {}),
+    });
+  }
+});
+
 module.exports = router;

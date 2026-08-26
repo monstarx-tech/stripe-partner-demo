@@ -68,6 +68,8 @@ async function loadOutlet(id) {
 
   await loadReaders();
   render();
+  loadTabs();
+  loadOrders();
 }
 
 async function loadReaders() {
@@ -183,6 +185,7 @@ $('#charge').onclick = async () => {
       trace('GET …/status', `succeeded · ${money(final.amount)}${final.tip ? ` · tip ${money(final.tip)}` : ''} · fee ${money(final.application_fee_amount)}`, 'ok');
       stage(`Paid ${money(final.amount)}${final.tip ? ` incl. ${money(final.tip)} tip` : ''}`, false);
       cart.clear();
+      loadOrders();
       setTimeout(() => { stage(''); render(); }, 4000);
     } else {
       trace('GET …/status', `ended as ${final.status}`, 'err');
@@ -205,6 +208,165 @@ async function poll(paymentIntentId, attempts) {
     await new Promise(r => setTimeout(r, 1000));
   }
   return last;
+}
+
+// ---- tabs ------------------------------------------------------------------
+// The F&B pre-auth pattern: hold now, let the bill grow, settle later against
+// a card that may have left the building.
+
+$('#openTab').onclick = () => {
+  $('#tabLabel').value = $('#table').value.trim() ? `Table ${$('#table').value.trim()}` : '';
+  $('#modal').hidden = false;
+};
+$('#tabCancel').onclick = () => { $('#modal').hidden = true; };
+
+$('#tabGo').onclick = async () => {
+  const readerId = $('#reader').value;
+  if (!readerId) return trace('open tab', 'no reader selected', 'err');
+
+  const hold = Math.round(parseFloat($('#tabHold').value) * 100);
+  if (!hold || hold < 100) return trace('open tab', 'hold must be at least S$1.00', 'err');
+
+  const kind = $('#reader').selectedOptions[0].dataset.kind;
+  $('#modal').hidden = true;
+  $('#tabGo').disabled = true;
+
+  try {
+    stage('Placing hold on the card…');
+    const tab = await api('/tabs', { method: 'POST', body: {
+      merchantId: merchant.id,
+      holdAmount: hold,
+      readerId,
+      label: $('#tabLabel').value.trim() || undefined,
+      tableNumber: $('#table').value.trim(),
+      items: [...cart.entries()].map(([productId, quantity]) => ({ productId, quantity })),
+    }});
+    trace('POST /tabs', `${tab.id} · hold ${money(tab.hold_amount)} · action=${tab.action}`);
+    trace('↳ paymentIntents.create', 'capture_method=manual · setup_future_usage=off_session');
+    trace('↳ readers.processPaymentIntent', 'process_config.allow_redisplay=always');
+
+    if (kind === 'simulated') {
+      stage('Simulating card tap…');
+      const tap = await api('/terminal/simulate-card', { method: 'POST', body: { merchantId: merchant.id, readerId } });
+      trace('POST /terminal/simulate-card', `action=${tap.action}`);
+    } else {
+      stage('Waiting for the guest to tap…');
+      trace('reader', 'awaiting physical card presentation');
+    }
+
+    // Poll until the hold is live (requires_capture).
+    for (let i = 0; i < (kind === 'physical' ? 60 : 20); i++) {
+      const t = await api(`/tabs/${tab.id}?merchantId=${merchant.id}`);
+      if (t.holdStatus === 'requires_capture') {
+        trace('GET /tabs/:id', `hold live — ${money(t.hold_amount)} authorised`, 'ok');
+        stage(`Tab ${t.label} open — ${money(t.hold_amount)} held`, false);
+        break;
+      }
+      await new Promise(r => setTimeout(r, 1000));
+    }
+
+    cart.clear();
+    render();
+    loadTabs();
+    setTimeout(() => stage(''), 4000);
+  } catch (e) {
+    trace('open tab', e.message, 'err');
+    stage(`Failed — ${e.message}`, false);
+  } finally {
+    $('#tabGo').disabled = false;
+  }
+};
+
+async function loadTabs() {
+  const { tabs } = await api(`/tabs?merchantId=${merchant.id}`);
+  const open = tabs.filter(t => t.status !== 'closed');
+  $('#tabCount').textContent = open.length;
+
+  $('#tabList').innerHTML = open.length ? open.map(t => {
+    const over = t.overage > 0;
+    return `<div style="padding:8px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:6px">
+        <strong style="flex:1">${esc(t.label)}</strong>
+        <span class="pill ${t.status === 'open' ? 'ok' : 'warn'}">${esc(t.status)}</span>
+      </div>
+      <div class="small muted" style="margin:3px 0 6px">
+        hold ${money(t.hold_amount)} · running <strong class="mono">${money(t.runningTotal)}</strong>
+        ${over ? `<span class="pill danger" style="margin-left:4px">+${money(t.overage)} over</span>` : ''}
+      </div>
+      <div class="btn-row">
+        <button class="btn" data-tabadd="${t.id}" style="padding:4px 9px;font-size:12px">Add ticket</button>
+        <button class="btn primary" data-tabclose="${t.id}" style="padding:4px 9px;font-size:12px">Close ${money(t.runningTotal)}</button>
+      </div>
+    </div>`;
+  }).join('') : '<p class="muted small" style="margin:0">No open tabs.</p>';
+
+  document.querySelectorAll('[data-tabadd]').forEach(b => b.onclick = () => addToTab(b.dataset.tabadd));
+  document.querySelectorAll('[data-tabclose]').forEach(b => b.onclick = () => closeTab(b.dataset.tabclose));
+}
+
+async function addToTab(tabId) {
+  if (!cart.size) return trace('add round', 'ticket is empty', 'err');
+  try {
+    const t = await api(`/tabs/${tabId}/items`, { method: 'POST', body: {
+      merchantId: merchant.id,
+      items: [...cart.entries()].map(([productId, quantity]) => ({ productId, quantity })),
+    }});
+    trace('POST /tabs/:id/items', `running ${money(t.runningTotal)}${t.overage ? ` · ${money(t.overage)} over hold` : ''}`);
+    cart.clear(); render(); loadTabs();
+  } catch (e) { trace('add round', e.message, 'err'); }
+}
+
+async function closeTab(tabId) {
+  try {
+    stage('Settling tab…');
+    const r = await api(`/tabs/${tabId}/close`, { method: 'POST', body: { merchantId: merchant.id } });
+    (r.steps || []).forEach(st => trace(`↳ ${st.step}`, st.detail + (st.released ? ` · released ${money(st.released)}` : ''), 'ok'));
+    trace('POST /tabs/:id/close', `settled ${money(r.finalTotal)}`, 'ok');
+    stage(`Tab closed — ${money(r.finalTotal)} settled`, false);
+    loadTabs(); loadOrders();
+    setTimeout(() => stage(''), 5000);
+  } catch (e) {
+    trace('close tab', e.message, 'err');
+    stage(`Close failed — ${e.message}`, false);
+  }
+}
+
+// ---- recent orders + refund ------------------------------------------------
+async function loadOrders() {
+  const { orders } = await api(`/orders?merchantId=${merchant.id}&limit=12`);
+  $('#orderRows').innerHTML = orders.length ? orders.map(o => {
+    const cls = { paid: 'ok', refunded: 'danger', partially_refunded: 'warn', open: 'info' }[o.status] || 'off';
+    const canRefund = o.status === 'paid' && o.payment_intent_id;
+    return `<tr>
+      <td class="mono small">${esc(o.id)}</td>
+      <td><span class="pill off">${esc(o.channel)}</span></td>
+      <td class="small">${esc(o.table_number || '—')}</td>
+      <td class="mono">${money(o.amount)}</td>
+      <td class="mono small muted">${money(o.application_fee)}</td>
+      <td><span class="pill ${cls}">${esc(o.status)}</span></td>
+      <td>${canRefund ? `<button class="btn danger" data-refund="${o.id}" style="padding:4px 9px;font-size:12px">Refund</button>` : ''}</td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="7" class="empty">No orders yet.</td></tr>';
+
+  document.querySelectorAll('[data-refund]').forEach(b => b.onclick = () => refund(b.dataset.refund, b));
+}
+$('#refreshOrders').onclick = () => loadOrders();
+
+async function refund(orderId, btn) {
+  btn.disabled = true; btn.textContent = 'Refunding…';
+  try {
+    const r = await api('/refunds', { method: 'POST', body: {
+      merchantId: merchant.id,
+      orderId,
+      // Goodwill refund: the platform gives up its fee alongside the outlet.
+      refundApplicationFee: true,
+    }});
+    trace('POST /refunds', `${r.refundId} · ${money(r.amount)} · fee clawed back: ${r.applicationFeeRefunded}`, 'ok');
+    loadOrders();
+  } catch (e) {
+    trace('refund', e.message, 'err');
+    btn.disabled = false; btn.textContent = 'Refund';
+  }
 }
 
 init();
