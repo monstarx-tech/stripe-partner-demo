@@ -84,7 +84,15 @@ function isV2Unavailable(err) {
 }
 
 async function createConnectedAccount(merchant, dashboard = 'express') {
-  const idempotencyKey = idemKey('account-create', merchant.id, dashboard);
+  // The idempotency key must include an attempt counter, not just the merchant.
+  //
+  // Keyed on merchantId alone, Stripe replays the cached response for 24h — so a
+  // merchant whose account was closed can never be given a replacement, and any
+  // caller that expects a NEW account silently receives the old one instead.
+  // That is a genuinely dangerous failure mode: it makes a fresh database look
+  // like it created an account when it actually adopted an existing one.
+  const attempt = merchant.account_attempt || 0;
+  const idempotencyKey = idemKey('account-create', merchant.id, dashboard, String(attempt));
 
   try {
     const account = await stripe.v2.core.accounts.create(buildAccountPayload(merchant, dashboard), { idempotencyKey });
@@ -146,6 +154,8 @@ router.post('/', async (req, res) => {
       stripe_account_id: account.id,
       payout_schedule: 'manual',
       onboarding_mode: dashboard,
+      // Bump so a future re-create gets a fresh idempotency key.
+      account_attempt: (merchant.account_attempt || 0) + 1,
     });
 
     logEvent({
