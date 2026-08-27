@@ -35,6 +35,100 @@ async function api(path, opts = {}) {
   return d;
 }
 
+// ---- on-screen S710 --------------------------------------------------------
+// A simulated reader is otherwise invisible: the "tap" is an API call with
+// nothing to look at. This renders what the guest would actually see on the
+// device — amount, tip prompt, approval — and drives the real test helper
+// underneath, including a real tip amount.
+
+const dev = {
+  el: () => $('#devScreen'),
+
+  idle() {
+    this.el().innerHTML = '<div class="s710-idle">Reader ready</div>';
+  },
+
+  waking(amount) {
+    this.el().innerHTML = `
+      <div class="s710-merchant">${esc(merchant.name)}</div>
+      <div class="s710-amount">${money(amount)}</div>
+      <div class="s710-sub pulsing">Connecting…</div>`;
+  },
+
+  // Tip prompt renders on the DEVICE, before the card is presented — the guest
+  // chooses, not the cashier. amount_eligible is the pre-tip total.
+  askTip(amount, onPick) {
+    const pcts = [0, 5, 10, 15];
+    this.el().innerHTML = `
+      <div class="s710-merchant">${esc(merchant.name)}</div>
+      <div class="s710-amount">${money(amount)}</div>
+      <div class="s710-prompt">Add a tip?</div>
+      <div class="s710-tips">
+        ${pcts.map(p => `<button data-tip="${Math.round(amount * p / 100)}">
+            ${p === 0 ? 'No tip' : p + '%'}
+            ${p === 0 ? '' : `<br><span style="font-weight:400;color:var(--muted)">${money(Math.round(amount * p / 100))}</span>`}
+          </button>`).join('')}
+      </div>`;
+    document.querySelectorAll('[data-tip]').forEach(b =>
+      b.onclick = () => onPick(parseInt(b.dataset.tip, 10)));
+  },
+
+  presentCard(amount, tip, onTap, onDecline) {
+    this.el().innerHTML = `
+      <div class="s710-merchant">${esc(merchant.name)}</div>
+      <div class="s710-amount">${money(amount + tip)}</div>
+      ${tip ? `<div class="s710-sub">incl. ${money(tip)} tip</div>` : ''}
+      <div class="s710-wave pulsing">〰️</div>
+      <div class="s710-prompt">Present card</div>
+      <button class="s710-tap" id="devTap">Tap card</button>
+      <button class="s710-tap ghost" id="devDecline">Tap declining card</button>`;
+    $('#devTap').onclick = onTap;
+    $('#devDecline').onclick = onDecline;
+  },
+
+  waiting(amount, tip) {
+    this.el().innerHTML = `
+      <div class="s710-merchant">${esc(merchant.name)}</div>
+      <div class="s710-amount">${money(amount + tip)}</div>
+      <div class="s710-wave pulsing">〰️</div>
+      <div class="s710-prompt">Present card</div>
+      <div class="s710-sub" style="margin-top:8px">Waiting for the guest…</div>`;
+  },
+
+  processing() {
+    this.el().innerHTML = '<div class="s710-wave pulsing">⏳</div><div class="s710-prompt">Processing…</div>';
+  },
+
+  approved(total, tip) {
+    this.el().innerHTML = `
+      <div class="s710-ok">✓</div>
+      <div class="s710-prompt">Approved</div>
+      <div class="s710-amount" style="font-size:24px">${money(total)}</div>
+      ${tip ? `<div class="s710-sub">incl. ${money(tip)} tip</div>` : ''}`;
+  },
+
+  declined(msg) {
+    this.el().innerHTML = `
+      <div class="s710-no">✕</div>
+      <div class="s710-prompt">Declined</div>
+      <div class="s710-sub">${esc(msg || 'Card was declined')}</div>`;
+  },
+};
+
+// Resolves once the guest has chosen a tip on the device (or immediately when
+// tipping is off).
+function collectTip(amount, tippingOn) {
+  if (!tippingOn) return Promise.resolve(0);
+  return new Promise(resolve => dev.askTip(amount, resolve));
+}
+
+// Resolves when the card is presented on the simulated device.
+function collectCard(amount, tip) {
+  return new Promise(resolve => dev.presentCard(amount, tip,
+    () => resolve({ decline: false }),
+    () => resolve({ decline: true })));
+}
+
 // ---- boot ------------------------------------------------------------------
 async function init() {
   ({ merchants } = await api('/platform/merchants'));
@@ -80,11 +174,21 @@ async function loadReaders() {
     $('#reader').innerHTML = readers.length
       ? readers.map(r => `<option value="${r.id}" data-kind="${r.kind}">${esc(r.label || r.id)} · ${r.kind} · ${r.status}</option>`).join('')
       : '<option value="">no readers registered</option>';
+    syncDeviceLabel();
   } catch (e) {
     $('#reader').innerHTML = '<option value="">unavailable</option>';
     trace('readers.list', e.message, 'err');
   }
 }
+function syncDeviceLabel() {
+  const opt = $('#reader').selectedOptions[0];
+  const kind = opt && opt.dataset.kind;
+  $('#devLabel').textContent = kind ? `S710 · ${kind}` : 'no reader';
+  // A physical reader has its own screen; the on-screen one only mirrors it.
+  $('#devScreen').parentElement.parentElement.style.opacity = kind === 'physical' ? '.55' : '1';
+  dev.idle();
+}
+$('#reader').onchange = syncDeviceLabel;
 $('#refresh').onclick = loadReaders;
 
 const add = id => { cart.set(id, (cart.get(id) || 0) + 1); render(); };
@@ -140,12 +244,14 @@ $('#charge').onclick = async () => {
 
   const kind = $('#reader').selectedOptions[0].dataset.kind;
   const t = totals();
+  const tippingOn = $('#tipping').value === '1';
   const btn = $('#charge');
   btn.disabled = true;
 
   try {
     // 1. PaymentIntent — direct charge on the connected account
     stage('Creating PaymentIntent…');
+    dev.waking(t.total);
     const pi = await api('/terminal/payment-intent', { method: 'POST', body: {
       merchantId: merchant.id,
       items: [...cart.entries()].map(([productId, quantity]) => ({ productId, quantity })),
@@ -162,17 +268,30 @@ $('#charge').onclick = async () => {
       paymentIntentId: pi.paymentIntentId,
       // Tip is offered against the PRE-TIP total. The tip raises the PI amount
       // but not application_fee_amount — the platform takes no cut of tips.
-      tipEligibleAmount: $('#tipping').value === '1' ? t.total : undefined,
+      tipEligibleAmount: tippingOn ? t.total : undefined,
     }});
     trace('POST /terminal/process', `reader ${readerId} · action=${proc.action}${proc.tipping ? ' · tipping on' : ''}`);
 
-    // 3. Card presentation
+    // 3. Card presentation — on the device, by the guest
     if (kind === 'simulated') {
-      stage('Simulating card tap…');
-      const tap = await api('/terminal/simulate-card', { method: 'POST', body: { merchantId: merchant.id, readerId } });
-      trace('POST /terminal/simulate-card', `action=${tap.action}`);
+      const tip = await collectTip(t.total, proc.tipping);
+      if (tip) trace('device', `guest added a ${money(tip)} tip`);
+
+      stage('Waiting for the guest to tap…');
+      const { decline } = await collectCard(t.total, tip);
+      dev.processing();
+
+      const tap = await api('/terminal/simulate-card', { method: 'POST', body: {
+        merchantId: merchant.id, readerId,
+        tipAmount: tip || undefined,
+        // Stripe's standard decline test card.
+        cardNumber: decline ? '4000000000000002' : undefined,
+      }});
+      trace('POST /terminal/simulate-card', `action=${tap.action}${tip ? ` · tip ${money(tip)}` : ''}${decline ? ' · declining card' : ''}`,
+            tap.action === 'succeeded' ? '' : 'err');
     } else {
       stage('Waiting for the guest to tap…');
+      dev.waiting(t.total, 0);
       trace('reader', 'awaiting physical card presentation on the S710');
     }
 
@@ -183,17 +302,24 @@ $('#charge').onclick = async () => {
 
     if (final.status === 'succeeded') {
       trace('GET …/status', `succeeded · ${money(final.amount)}${final.tip ? ` · tip ${money(final.tip)}` : ''} · fee ${money(final.application_fee_amount)}`, 'ok');
+      // The headline: the tip raised the amount, the platform fee did not move.
+      if (final.tip) trace('fee check', `tip ${money(final.tip)} · platform fee ${money(final.application_fee_amount)} on the PRE-TIP total`, 'ok');
+      dev.approved(final.amount, final.tip);
       stage(`Paid ${money(final.amount)}${final.tip ? ` incl. ${money(final.tip)} tip` : ''}`, false);
       cart.clear();
       loadOrders();
-      setTimeout(() => { stage(''); render(); }, 4000);
+      setTimeout(() => { stage(''); dev.idle(); render(); }, 6000);
     } else {
       trace('GET …/status', `ended as ${final.status}`, 'err');
+      dev.declined(`Payment ${final.status}`);
       stage(`Not completed — ${final.status}`, false);
+      setTimeout(() => dev.idle(), 6000);
     }
   } catch (e) {
     trace('error', e.message, 'err');
+    dev.declined(e.message);
     stage(`Failed — ${e.message}`, false);
+    setTimeout(() => dev.idle(), 6000);
   } finally {
     btn.disabled = false;
     render();
@@ -233,6 +359,7 @@ $('#tabGo').onclick = async () => {
 
   try {
     stage('Placing hold on the card…');
+    dev.waking(hold);
     const tab = await api('/tabs', { method: 'POST', body: {
       merchantId: merchant.id,
       holdAmount: hold,
@@ -246,11 +373,15 @@ $('#tabGo').onclick = async () => {
     trace('↳ readers.processPaymentIntent', 'process_config.allow_redisplay=always');
 
     if (kind === 'simulated') {
-      stage('Simulating card tap…');
+      // No tip prompt on a pre-auth hold — the bill isn't known yet.
+      stage('Waiting for the guest to tap…');
+      await collectCard(hold, 0);
+      dev.processing();
       const tap = await api('/terminal/simulate-card', { method: 'POST', body: { merchantId: merchant.id, readerId } });
       trace('POST /terminal/simulate-card', `action=${tap.action}`);
     } else {
       stage('Waiting for the guest to tap…');
+      dev.waiting(hold, 0);
       trace('reader', 'awaiting physical card presentation');
     }
 
@@ -259,6 +390,8 @@ $('#tabGo').onclick = async () => {
       const t = await api(`/tabs/${tab.id}?merchantId=${merchant.id}`);
       if (t.holdStatus === 'requires_capture') {
         trace('GET /tabs/:id', `hold live — ${money(t.hold_amount)} authorised`, 'ok');
+        dev.approved(t.hold_amount, 0);
+        setTimeout(() => dev.idle(), 5000);
         stage(`Tab ${t.label} open — ${money(t.hold_amount)} held`, false);
         break;
       }

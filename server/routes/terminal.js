@@ -225,18 +225,38 @@ router.post('/process', async (req, res) => {
 router.post('/simulate-card', async (req, res) => {
   const merchant = requireMerchantWithAccount(req, res);
   if (!merchant) return;
-  const { readerId } = req.body;
+  const { readerId, tipAmount, cardNumber } = req.body;
 
   try {
+    // amount_tip drives a real tip through the simulator: it raises the
+    // PaymentIntent's amount while application_fee_amount — fixed at creation —
+    // stays put. That is the tip-exempt fee, demonstrable rather than asserted.
+    //
+    // cardNumber lets the on-screen reader present a declining test card
+    // (e.g. 4000000000000002) so failure handling can be shown, not just
+    // described.
+    const params = { type: 'card_present' };
+    if (tipAmount) params.amount_tip = parseInt(tipAmount, 10);
+    if (cardNumber) params.card_present = { number: cardNumber };
+
     const reader = await stripe.testHelpers.terminal.readers.presentPaymentMethod(
-      readerId, {}, onAccount(merchant),
+      readerId, params, onAccount(merchant),
     );
+
     logEvent({
       merchantId: merchant.id,
       kind: 'terminal.simulate_card',
-      message: `Simulated card tap on ${readerId}`,
+      message: `Simulated tap on ${readerId}`
+        + (tipAmount ? ` with ${formatAmount(parseInt(tipAmount, 10), merchant.currency)} tip` : ''),
+      payload: { readerId, tipAmount: tipAmount || 0 },
     });
-    res.json({ readerId, action: reader.action && reader.action.status });
+
+    res.json({
+      readerId,
+      action: reader.action && reader.action.status,
+      failure: (reader.action && reader.action.failure_message) || null,
+      tipAmount: tipAmount ? parseInt(tipAmount, 10) : 0,
+    });
   } catch (err) {
     res.status(400).json({
       ...describeStripeError(err),
