@@ -85,4 +85,9 @@ The server refuses to boot on an `sk_live_` key.
 | 3A.1 Refund with clawback | ✅ Fee refund confirmed on Stripe |
 | 3A.2 Pre-authorization | ✅ Both capture paths, plus off-session overage |
 
-Test mode only.
+## Licence
+
+MIT — see [LICENSE](LICENSE). Built by Monstar Lab Singapore; use it, fork it,
+deploy it for a client.
+
+Test mode only. No live keys, and the server refuses to start with one.
