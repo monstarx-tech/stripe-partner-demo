@@ -89,6 +89,18 @@ router.post('/payment-intent', async (req, res) => {
   const { amount, items, manualCapture, tableNumber, orderType } = req.body;
 
   try {
+    // Same guard as Checkout: a card_present PaymentIntent on an account that
+    // cannot charge fails at the reader, in front of a waiting guest.
+    const account = await stripe.accounts.retrieve(merchant.stripe_account_id);
+    if (!account.charges_enabled) {
+      return res.status(400).json({
+        error: `${merchant.name} cannot accept payments yet — onboarding is incomplete.`,
+        charges_enabled: false,
+        requirements: account.requirements.currently_due,
+        hint: `Finish onboarding at ${config.baseUrl}/accounts/${merchant.id}/onboard`,
+      });
+    }
+
     let order = null;
     let chargeAmount = parseInt(amount, 10) || 0;
     let fee;

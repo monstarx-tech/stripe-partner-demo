@@ -51,6 +51,23 @@ router.post('/', async (req, res) => {
   const currency = merchant.currency || config.platform.currency;
 
   try {
+    // Fail here, not on Stripe's payment page.
+    //
+    // A Checkout Session will happily be CREATED for an account that cannot
+    // accept charges — the rejection only lands when the diner presses Pay, as
+    // an opaque "There was an error processing your request." That is the worst
+    // possible place to discover an onboarding gap: the outlet looks broken to
+    // its own customer, and the real cause is invisible.
+    const account = await stripe.accounts.retrieve(merchant.stripe_account_id);
+    if (!account.charges_enabled) {
+      return res.status(400).json({
+        error: `${merchant.name} cannot accept payments yet — onboarding is incomplete.`,
+        charges_enabled: false,
+        requirements: account.requirements.currently_due,
+        hint: `Finish onboarding at ${config.baseUrl}/accounts/${merchant.id}/onboard`,
+      });
+    }
+
     const built = buildOrder(merchant, items);
     const order = saveOrder(merchant, built, { channel: 'web', orderType: 'takeaway', customerEmail });
     const lineItems = toLineItems(order, built, currency);
