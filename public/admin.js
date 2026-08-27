@@ -302,6 +302,42 @@ async function pollEvents() {
   } catch { /* transient */ }
 }
 
+// Arriving back from Stripe-hosted onboarding. The merchant has just finished a
+// KYC flow on someone else's domain; landing them on an unchanged table with no
+// acknowledgement reads as "did that work?".
+async function handleOnboardingReturn() {
+  const id = new URLSearchParams(location.search).get('onboarded');
+  if (!id) return;
+
+  history.replaceState({}, '', location.pathname);
+  const m = merchants.find(x => x.id === id);
+  const name = m ? m.name : id;
+
+  const bar = document.createElement('div');
+  bar.className = 'card';
+  bar.style.cssText = 'border-color:var(--accent);background:var(--accent-soft)';
+  bar.innerHTML = `<div class="card-body" style="display:flex;align-items:center;gap:12px">
+      <svg class="i" style="color:var(--accent)" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+      <div style="flex:1">
+        <strong>Onboarding submitted for ${esc(name)}</strong>
+        <div class="small muted" id="obDetail">Checking with Stripe…</div>
+      </div>
+    </div>`;
+  $('.tabs').insertAdjacentElement('beforebegin', bar);
+
+  try {
+    const st = await api(`/accounts/${id}/status`);
+    // Capabilities activate asynchronously — "submitted" is not "live".
+    $('#obDetail').innerHTML = st.charges_enabled
+      ? `Charges enabled${st.payouts_enabled ? ' and payouts enabled' : ' — payouts still pending'}. This outlet can take payments now.`
+      : 'Details submitted. Stripe is still verifying — charges will enable shortly.';
+    refreshStatus(id);
+  } catch (e) {
+    $('#obDetail').textContent = e.message;
+  }
+  setTimeout(() => bar.remove(), 15000);
+}
+
 // ---- reconciliation ----
 async function loadMoney() {
   const d = await api('/platform/reconciliation');
@@ -344,6 +380,7 @@ async function loadMoney() {
 $('#reloadMoney').onclick = loadMoney;
 
 loadMerchants().then(() => {
+  handleOnboardingReturn();
   merchants.filter(m => m.stripe_account_id).forEach(m => refreshStatus(m.id));
   pollEvents();
   setInterval(pollEvents, 2000);

@@ -192,7 +192,10 @@ router.get('/:id/onboard', async (req, res) => {
       // Account Links are single-use and expire. refresh_url sends the merchant
       // back here to mint a fresh one rather than showing them a dead page.
       refresh_url: `${config.baseUrl}/accounts/${merchant.id}/onboard`,
-      return_url: `${config.baseUrl}/accounts/${merchant.id}/status`,
+      // Return the merchant to the CONSOLE, not to /status — that endpoint is a
+      // JSON API, and dropping someone onto raw JSON at the end of a KYC flow
+      // reads as a broken integration.
+      return_url: `${config.baseUrl}/admin.html?onboarded=${merchant.id}`,
       type: 'account_onboarding',
     });
 

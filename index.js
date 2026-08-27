@@ -14,8 +14,30 @@ app.set('trust proxy', 1);
 app.use('/webhooks', express.raw({ type: 'application/json' }));
 app.use(express.json());
 
-// UIs (platform CMS, storefront, POS) land here in later phases
-app.use(express.static(path.join(__dirname, 'public')));
+// HTML is templated on the way out so {{BASE_URL}} in og:/canonical tags tracks
+// the configured domain. Absolute URLs are required by link-preview crawlers,
+// and hardcoding them means every domain change silently breaks previews.
+const PUBLIC_DIR = path.join(__dirname, 'public');
+const htmlCache = new Map();
+
+app.get(/\.html$|^\/$/, (req, res, next) => {
+  const rel = req.path === '/' ? 'index.html' : req.path.replace(/^\/+/, '');
+  const file = path.join(PUBLIC_DIR, rel);
+  if (!file.startsWith(PUBLIC_DIR)) return res.status(400).end();
+
+  try {
+    let body = htmlCache.get(file);
+    if (body === undefined || !config.isProd) {
+      body = require('fs').readFileSync(file, 'utf8').split('{{BASE_URL}}').join(config.baseUrl);
+      htmlCache.set(file, body);
+    }
+    res.type('html').send(body);
+  } catch {
+    next();
+  }
+});
+
+app.use(express.static(PUBLIC_DIR));
 
 app.use('/merchants', require('./server/routes/merchants'));
 app.use('/accounts', require('./server/routes/accounts'));
