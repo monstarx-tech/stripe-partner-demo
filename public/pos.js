@@ -20,7 +20,10 @@ $('#clearTrace').onclick = () => { $('#trace').innerHTML = ''; };
 
 function stage(text, spinning = true) {
   $('#stage').innerHTML = text
-    ? `<div class="stage">${spinning ? '<span class="spin"></span>' : '✓'}<span>${esc(text)}</span></div>`
+    ? `<div class="stage">${spinning
+          ? '<span class="spin"></span>'
+          : '<svg class="i" viewBox="0 0 24 24" style="color:var(--ok)"><path d="M20 6 9 17l-5-5"/></svg>'
+        }<span>${esc(text)}</span></div>`
     : '';
 }
 
@@ -78,7 +81,7 @@ const dev = {
       <div class="s710-merchant">${esc(merchant.name)}</div>
       <div class="s710-amount">${money(amount + tip)}</div>
       ${tip ? `<div class="s710-sub">incl. ${money(tip)} tip</div>` : ''}
-      <div class="s710-wave pulsing">〰️</div>
+      <svg class="s710-glyph pulsing" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 0 1 0-6M8.5 13.5a5 5 0 0 1 0-9M13 15a9 9 0 0 1 0-12"/><rect x="15" y="4" width="6" height="16" rx="2"/></svg>
       <div class="s710-prompt">Present card</div>
       <button class="s710-tap" id="devTap">Tap card</button>
       <button class="s710-tap ghost" id="devDecline">Tap declining card</button>`;
@@ -90,18 +93,18 @@ const dev = {
     this.el().innerHTML = `
       <div class="s710-merchant">${esc(merchant.name)}</div>
       <div class="s710-amount">${money(amount + tip)}</div>
-      <div class="s710-wave pulsing">〰️</div>
+      <svg class="s710-glyph pulsing" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 0 1 0-6M8.5 13.5a5 5 0 0 1 0-9M13 15a9 9 0 0 1 0-12"/><rect x="15" y="4" width="6" height="16" rx="2"/></svg>
       <div class="s710-prompt">Present card</div>
       <div class="s710-sub" style="margin-top:8px">Waiting for the guest…</div>`;
   },
 
   processing() {
-    this.el().innerHTML = '<div class="s710-wave pulsing">⏳</div><div class="s710-prompt">Processing…</div>';
+    this.el().innerHTML = '<svg class="s710-glyph pulsing" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg><div class="s710-prompt">Processing…</div>';
   },
 
   approved(total, tip) {
     this.el().innerHTML = `
-      <div class="s710-ok">✓</div>
+      <svg class="s710-glyph ok" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.2l2.4 2.4 4.6-4.9"/></svg>
       <div class="s710-prompt">Approved</div>
       <div class="s710-amount" style="font-size:24px">${money(total)}</div>
       ${tip ? `<div class="s710-sub">incl. ${money(tip)} tip</div>` : ''}`;
@@ -109,7 +112,7 @@ const dev = {
 
   declined(msg) {
     this.el().innerHTML = `
-      <div class="s710-no">✕</div>
+      <svg class="s710-glyph no" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
       <div class="s710-prompt">Declined</div>
       <div class="s710-sub">${esc(msg || 'Card was declined')}</div>`;
   },

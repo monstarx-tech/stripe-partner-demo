@@ -10,6 +10,7 @@
     --ink:#0a0e1a; --ink-2:#141a2e; --paper:#ffffff; --wash:#f6f8fb;
     --line:#e3e8ee; --muted:#697386; --text:#1a1f36;
     --brand:#635bff; --brand-2:#00d4ff; --ok:#0e7c5a; --ok-bg:#e3f5ee;
+    --ml:#F2E900;
     --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;
   }
   *{box-sizing:border-box}
@@ -110,6 +111,27 @@
   .doc b{display:block;font-size:14px;margin-bottom:3px}
   .doc span{font-size:12.5px;color:var(--muted)}
 
+  /* ---------- brand marks ---------- */
+  .mark{display:inline-flex;align-items:center;gap:9px;line-height:1}
+  .ml-mark{font-weight:700;font-size:19px;letter-spacing:-.035em;color:var(--ml);
+           font-family:"Helvetica Neue",Helvetica,Arial,sans-serif}
+  .ml-dots{display:grid;grid-template-columns:repeat(2,5px);grid-template-rows:repeat(2,5px);
+           gap:3px;margin-left:1px}
+  .ml-dots i{background:var(--ml);display:block;width:5px;height:5px}
+  .stripe-mark{font-weight:700;font-size:18px;letter-spacing:-.045em;color:#fff;
+               font-family:"Helvetica Neue",Helvetica,Arial,sans-serif}
+  .mark-sep{color:rgba(255,255,255,.28);font-size:15px}
+  footer .ml-mark,footer .ml-dots i{color:var(--ml)}
+
+  /* ---------- icons ---------- */
+  .i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;
+     stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .surface .ico .i{width:21px;height:21px;color:var(--brand)}
+  .card h3 .i{width:18px;height:18px;color:var(--brand)}
+  .go .i{width:15px;height:15px;margin-left:2px;vertical-align:-2px}
+  .done .i{width:12px;height:12px;stroke-width:2.6;vertical-align:-2px;margin-right:3px}
+  .doc b .i{width:14px;height:14px;color:var(--muted);vertical-align:-2px;margin-right:5px}
+
   footer{background:var(--ink);color:rgba(255,255,255,.6);padding:44px 0;font-size:13px}
   .foot{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
   .foot .ml{color:#fff;font-weight:700}
@@ -126,12 +148,13 @@
 <div class="hero">
   <div class="wrap hero-in">
     <div class="bar">
-      <div class="byline">
-        <span class="ml">Monstar Lab</span>
-        <span class="x">×</span>
-        <span class="st">Stripe Partner Solutions Lab</span>
-      </div>
-      <span class="tag">Singapore · Test mode</span>
+      <span class="mark">
+        <span class="ml-mark">Monstarlab</span>
+        <span class="ml-dots"><i></i><i></i><i></i><i></i></span>
+      </span>
+      <span class="mark-sep">×</span>
+      <span class="mark"><span class="stripe-mark">stripe</span></span>
+      <span class="tag">Partner Solutions Lab · Singapore</span>
     </div>
 
     <div class="eyebrow">F&amp;B payments accelerator</div>
@@ -144,7 +167,7 @@
     </p>
 
     <div class="cta">
-      <a class="btn p" href="/admin.html">Open the platform console →</a>
+      <a class="btn p" href="/admin.html">Open the platform console <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
       <a class="btn g" href="#surfaces">See what was built</a>
     </div>
 
@@ -167,7 +190,7 @@
 
     <div class="surfaces">
       <a class="surface" href="/admin.html">
-        <div class="ico">🏢</div>
+        <div class="ico"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></svg></div>
         <h3>Platform console</h3>
         <p>Onboard outlets two ways, manage menus and readers, configure commercial
         terms, and reconcile revenue by outlet and channel.</p>
@@ -175,11 +198,11 @@
           <span class="chip">Connect v2</span><span class="chip">Express + API onboarding</span>
           <span class="chip">Reconciliation</span>
         </div>
-        <span class="go">Open console →</span>
+        <span class="go">Open console <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
       </a>
 
       <a class="surface" href="/store.html">
-        <div class="ico">🍽️</div>
+        <div class="ico"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></div>
         <h3>Customer storefront</h3>
         <p>A diner orders online and pays by card or PayNow. The receipt shows
         exactly where the money went.</p>
@@ -187,11 +210,11 @@
           <span class="chip">Checkout</span><span class="chip">Direct charge</span>
           <span class="chip">PayNow</span>
         </div>
-        <span class="go">Order something →</span>
+        <span class="go">Order something <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
       </a>
 
       <a class="surface" href="/pos.html">
-        <div class="ico">🧾</div>
+        <div class="ico"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></div>
         <h3>POS &amp; Terminal</h3>
         <p>Server-driven card-present payments with an on-screen S710, tip prompts,
         running tabs and refunds — plus a live trace of every API call.</p>
@@ -199,7 +222,7 @@
           <span class="chip">Terminal</span><span class="chip">Pre-auth tabs</span>
           <span class="chip">On-reader tipping</span>
         </div>
-        <span class="go">Run the till →</span>
+        <span class="go">Run the till <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
       </a>
     </div>
   </div>
@@ -242,39 +265,39 @@
 
     <div class="grid2">
       <div class="card">
-        <h3>🍺 Running tabs, settled after the guest leaves</h3>
+        <h3><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg> Running tabs, settled after the guest leaves</h3>
         <p>Hold the card at first order, let rounds accrue, capture the real total —
         and off-session-charge any overage to the card the reader saved. Capturing
         less than the hold releases the rest. <code>setup_future_usage</code> makes
         the tap leave a reusable card behind; no Customer object is involved.</p>
       </div>
       <div class="card">
-        <h3>💛 Tips carry a 0% platform fee</h3>
+        <h3><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21.2l7.8-7.7 1-1.1a5.5 5.5 0 0 0 0-7.8z"/></svg> Tips carry a 0% platform fee</h3>
         <p>The fee is computed on the pre-tip total and fixed at PaymentIntent
         creation, so an on-reader tip raises the amount but never the fee.
         Verified live: S$20.00 + S$3.00 tip = S$23.00, fee unchanged at S$0.50.</p>
       </div>
       <div class="card">
-        <h3>↩️ Refunds that reverse the platform too</h3>
+        <h3><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 4v6h6"/><path d="M3.5 15a9 9 0 1 0 2.1-9.4L1 10"/></svg> Refunds that reverse the platform too</h3>
         <p>With direct charges there is no transfer to reverse, so
         <code>refund_application_fee</code> is the only lever — and whether the
         platform forgoes its fee is a business decision, exposed at the call site
         rather than buried in a default.</p>
       </div>
       <div class="card">
-        <h3>🇸🇬 Singapore bill composition</h3>
+        <h3><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8M16 17H8M10 9H8"/></svg> Singapore bill composition</h3>
         <p>Service charge on the subtotal, then GST on the inclusive amount — GST
         applies to the service charge. Getting that order backwards under-collects
         tax on every transaction. Rates are per outlet.</p>
       </div>
       <div class="card">
-        <h3>🛵 The revenue that never touches Stripe</h3>
+        <h3><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> The revenue that never touches Stripe</h3>
         <p>Delivery aggregators and OTAs collect payment themselves and remit net
         proceeds separately. Those orders are recorded as their own channel with no
         PaymentIntent and no fee, so reconciliation stays honest about the boundary.</p>
       </div>
       <div class="card">
-        <h3>🔀 Two onboarding models, per outlet</h3>
+        <h3><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3v12"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg> Two onboarding models, per outlet</h3>
         <p>Stripe-hosted for an independent that self-serves; API-based for a chain
         that already holds its outlets' data and won't run 200 browser sessions.
         The same decision, configured rather than hard-coded.</p>
@@ -297,22 +320,22 @@
         <tbody>
           <tr><td><strong>2.1</strong> Connected accounts</td>
               <td>v2 Accounts API, Express <em>and</em> API-based onboarding, manual payouts</td>
-              <td><span class="done">Verified</span></td></tr>
+              <td><span class="done"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Verified</span></td></tr>
           <tr><td><strong>2.2</strong> Online payment</td>
               <td>Checkout Session as a direct charge, card and PayNow, fee split on the receipt</td>
-              <td><span class="done">Verified</span></td></tr>
+              <td><span class="done"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Verified</span></td></tr>
           <tr><td><strong>2.3</strong> Terminal payment</td>
               <td>Server-driven, no client SDK, on-reader tipping, on-screen S710</td>
-              <td><span class="done">Verified</span></td></tr>
+              <td><span class="done"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Verified</span></td></tr>
           <tr><td><strong>2.4</strong> Reconciliation webhook <em>(optional)</em></td>
               <td>Built anyway — Connect-routed, idempotent by event id and by state, handles disputes</td>
-              <td><span class="done">Verified</span></td></tr>
+              <td><span class="done"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Verified</span></td></tr>
           <tr><td><strong>3A.1</strong> Refund with clawback</td>
               <td>Application fee refunded alongside the charge, confirmed on Stripe</td>
-              <td><span class="done">Verified</span></td></tr>
+              <td><span class="done"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Verified</span></td></tr>
           <tr><td><strong>3A.2</strong> Pre-authorisation</td>
               <td>Hold, capture below the hold, and off-session overage against the saved card</td>
-              <td><span class="done">Verified</span></td></tr>
+              <td><span class="done"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Verified</span></td></tr>
         </tbody>
       </table>
     </div>
@@ -333,25 +356,28 @@
     </div>
     <div class="docs">
       <a class="doc" href="https://github.com/monstarx-tech/stripe-partner-demo/blob/main/DECISIONS.md">
-        <b>DECISIONS.md</b><span>Four Connect decisions, vertical patterns, the 70/30 split</span></a>
+        <b><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>DECISIONS.md</b><span>Four Connect decisions, vertical patterns, the 70/30 split</span></a>
       <a class="doc" href="https://github.com/monstarx-tech/stripe-partner-demo/blob/main/docs/ARCHITECTURE.md">
-        <b>Reference architecture</b><span>L100 landscape, L200 fund flow, L300 sequences</span></a>
+        <b><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 9 5-9 5-9-5z"/><path d="m3 17 9 5 9-5"/><path d="m3 12 9 5 9-5"/></svg>Reference architecture</b><span>L100 landscape, L200 fund flow, L300 sequences</span></a>
       <a class="doc" href="https://github.com/monstarx-tech/stripe-partner-demo/blob/main/docs/RUNBOOK.md">
-        <b>Operational runbook</b><span>Onboarding, readers, payouts, disputes, webhooks</span></a>
+        <b><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0 5 5l-9 9a2.8 2.8 0 0 1-4-4z"/></svg>Operational runbook</b><span>Onboarding, readers, payouts, disputes, webhooks</span></a>
       <a class="doc" href="https://github.com/monstarx-tech/stripe-partner-demo/tree/main/postman">
-        <b>Postman collection</b><span>35 requests across 10 folders, runnable in order</span></a>
+        <b><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>Postman collection</b><span>35 requests across 10 folders, runnable in order</span></a>
       <a class="doc" href="https://github.com/monstarx-tech/stripe-partner-demo/blob/main/docs/RATE-CARD.md">
-        <b>Rate card</b><span>Tiered pricing and explicit scope boundaries</span></a>
+        <b><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.6 13.4 12 22l-9-9V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>Rate card</b><span>Tiered pricing and explicit scope boundaries</span></a>
       <a class="doc" href="https://github.com/monstarx-tech/stripe-partner-demo">
-        <b>Source</b><span>The full implementation on GitHub</span></a>
+        <b><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg>Source</b><span>The full implementation on GitHub</span></a>
     </div>
   </div>
 </section>
 
 <footer>
   <div class="wrap foot">
-    <span class="ml">Monstar Lab Singapore</span>
-    <span>Built for the Stripe Partner Solutions Lab</span>
+    <span class="mark">
+      <span class="ml-mark">Monstarlab</span>
+      <span class="ml-dots"><i></i><i></i><i></i><i></i></span>
+    </span>
+    <span>Singapore · built for the Stripe Partner Solutions Lab</span>
     <span class="sp">Stripe test mode — no live payments</span>
   </div>
 </footer>

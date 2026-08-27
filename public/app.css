@@ -173,3 +173,17 @@ input:focus, select:focus, textarea:focus {
   .wrap { padding: 16px; }
   table { display: block; overflow-x: auto; }
 }
+
+/* ---- brand marks ---- */
+:root{ --ml:#F2E900; }
+.brand .ml-mark{font-weight:700;font-size:15px;letter-spacing:-.035em;
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;color:var(--text)}
+.brand .ml-dots{display:grid;grid-template-columns:repeat(2,4px);grid-template-rows:repeat(2,4px);
+  gap:2px;margin:0 2px 0 1px}
+.brand .ml-dots i{background:var(--ml);width:4px;height:4px;display:block}
+.brand .sep{color:var(--border);margin:0 2px}
+.brand .app{font-weight:600;font-size:14px;letter-spacing:-.01em}
+
+/* ---- inline icons ---- */
+.i{width:16px;height:16px;flex:none;stroke:currentColor;fill:none;
+   stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;vertical-align:-3px}
