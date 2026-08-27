@@ -311,4 +311,61 @@ router.post('/:id/prefill-test', async (req, res) => {
   }
 });
 
+// POST /accounts/:id/link  { accountId }
+// Reconnect an outlet to a Stripe account that already exists.
+//
+// Connect accounts outlive the platform's own database. A restored backup, a
+// migrated environment, or a container that came back without its volume all
+// leave the same mess: fully-onboarded accounts still trading on Stripe that
+// the platform has forgotten. Re-onboarding is the wrong fix — it strands the
+// original account and its payment history.
+//
+// Verifies the account is reachable and adopts it, carrying over its real
+// capability state rather than assuming.
+router.post('/:id/link', async (req, res) => {
+  const merchant = db.merchants.findById(req.params.id);
+  if (!merchant) return res.status(404).json({ error: 'Merchant not found' });
+
+  const { accountId } = req.body;
+  if (!accountId || !accountId.startsWith('acct_')) {
+    return res.status(400).json({ error: 'accountId (acct_...) is required' });
+  }
+
+  const clash = db.merchants.findOne(m => m.stripe_account_id === accountId && m.id !== merchant.id);
+  if (clash) {
+    return res.status(400).json({ error: `${accountId} is already linked to ${clash.name}` });
+  }
+
+  try {
+    const account = await stripe.accounts.retrieve(accountId);
+
+    db.merchants.update(merchant.id, {
+      stripe_account_id: account.id,
+      payout_schedule: (account.settings.payouts.schedule.interval) || 'manual',
+      // An Express Dashboard implies Stripe-hosted onboarding; its absence
+      // implies the platform submitted KYC itself.
+      onboarding_mode: account.type === 'express' ? 'express' : (merchant.onboarding_mode || 'express'),
+      account_attempt: (merchant.account_attempt || 0) + 1,
+    });
+
+    logEvent({
+      merchantId: merchant.id,
+      kind: 'connect.account.linked',
+      message: `${merchant.name} reconnected to existing account ${account.id}`,
+      payload: { accountId: account.id, charges_enabled: account.charges_enabled },
+    });
+
+    res.json({
+      accountId: account.id,
+      linkedTo: merchant.name,
+      charges_enabled: account.charges_enabled,
+      payouts_enabled: account.payouts_enabled,
+      details_submitted: account.details_submitted,
+    });
+  } catch (err) {
+    console.error('Account link failed:', describeStripeError(err));
+    res.status(400).json(describeStripeError(err));
+  }
+});
+
 module.exports = router;
