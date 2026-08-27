@@ -111,6 +111,55 @@
   .doc b{display:block;font-size:14px;margin-bottom:3px}
   .doc span{font-size:12.5px;color:var(--muted)}
 
+
+  /* ---------- proof strip ---------- */
+  .proof{display:grid;grid-template-columns:300px 1fr 1fr;gap:16px;align-items:start}
+  .shot{background:var(--paper);border:1px solid var(--line);border-radius:14px;
+        padding:18px;height:100%;display:flex;flex-direction:column}
+  .shot-cap{margin-top:14px;padding-top:13px;border-top:1px solid var(--line)}
+  .shot-cap b{display:block;font-size:13.5px;margin-bottom:3px}
+  .shot-cap span{font-size:12.5px;color:var(--muted);line-height:1.5}
+
+  /* device */
+  .dv{background:#16181d;border-radius:15px;padding:10px;border:1px solid #2a2e37}
+  .dv-top{display:flex;gap:5px;align-items:center;padding:1px 5px 8px}
+  .dv-top i{width:5px;height:5px;border-radius:50%;background:#3a3f4a;display:block}
+  .dv-top em{margin-left:auto;font-style:normal;color:#8b93a3;font-size:9px;
+             letter-spacing:.08em;text-transform:uppercase}
+  .dv-scr{background:#fff;border-radius:9px;padding:16px 13px;text-align:center}
+  .dv-m{font-size:10.5px;color:var(--muted);font-weight:600}
+  .dv-a{font-size:26px;font-weight:700;letter-spacing:-.03em;margin:1px 0 2px}
+  .dv-p{font-size:13px;font-weight:600;margin-bottom:9px}
+  .dv-tips{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+  .dv-tips b{padding:8px 3px;border:1px solid var(--line);border-radius:7px;
+             font-size:11.5px;font-weight:600;line-height:1.3}
+  .dv-tips b.sel{border-color:var(--brand);background:var(--brand-soft,#f0efff);color:var(--brand)}
+  .dv-tips b em{display:block;font-style:normal;font-weight:400;color:var(--muted);font-size:10.5px}
+  .dv-foot{text-align:center;color:#6a7180;font-size:9px;padding-top:7px;letter-spacing:.05em}
+
+  /* receipt */
+  .rc-row{display:flex;justify-content:space-between;font-size:13px;padding:4px 0}
+  .rc-row.mut{color:var(--muted)}
+  .rc-row.tot{font-weight:700;font-size:15px;border-top:1px solid var(--line);
+              margin-top:6px;padding-top:9px}
+  .rc-bar{display:flex;height:34px;border-radius:8px;overflow:hidden;margin:14px 0 10px}
+  .rc-bar .m{background:#12b981;color:#fff;display:grid;place-items:center;
+             font-size:12px;font-weight:700}
+  .rc-bar .p{background:var(--brand)}
+  .rc-leg{display:flex;justify-content:space-between;font-size:12.5px;padding:2px 0}
+  .rc-leg i{width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:6px}
+
+  /* trace */
+  .tr-box{background:#fbfcfd;border:1px solid var(--line);border-radius:10px;
+          font-family:var(--mono);font-size:11px;overflow:hidden}
+  .tr-row{padding:7px 11px;border-bottom:1px solid var(--line);display:flex;gap:8px}
+  .tr-row:last-child{border-bottom:none}
+  .tr-row .t{color:var(--muted);flex:none}
+  .tr-row .m{color:var(--brand);font-weight:700}
+  .tr-row.ok .m{color:var(--ok)}
+  .tr-row .d{color:var(--text);word-break:break-word}
+  @media(max-width:900px){ .proof{grid-template-columns:1fr} }
+
   /* ---------- brand marks ---------- */
   .mark{display:inline-flex;align-items:center;gap:9px;line-height:1}
   .ml-mark{font-weight:700;font-size:19px;letter-spacing:-.035em;color:var(--ml);
@@ -306,7 +355,83 @@
   </div>
 </section>
 
+
 <section class="alt">
+  <div class="wrap">
+    <div class="lead">
+      <h2>Three moments worth looking at</h2>
+      <p class="sub">Taken from the running application — the guest's screen, the
+      receipt, and what the server actually did.</p>
+    </div>
+
+    <div class="proof">
+
+      <div class="shot">
+        <div class="dv">
+          <div class="dv-top"><i></i><i></i><em>S710</em></div>
+          <div class="dv-scr">
+            <div class="dv-m">The Golden Fork</div>
+            <div class="dv-a">S$26.38</div>
+            <div class="dv-p">Add a tip?</div>
+            <div class="dv-tips">
+              <b>No tip</b>
+              <b>5%<em>S$1.32</em></b>
+              <b class="sel">10%<em>S$2.64</em></b>
+              <b>15%<em>S$3.96</em></b>
+            </div>
+          </div>
+          <div class="dv-foot">STRIPE TERMINAL</div>
+        </div>
+        <div class="shot-cap">
+          <b>The guest chooses the tip</b>
+          <span>Rendered on the reader, against the pre-tip total. The tip raises
+          the PaymentIntent — never the platform fee.</span>
+        </div>
+      </div>
+
+      <div class="shot">
+        <div class="rc-row"><span>1 × Wagyu Beef Burger</span><span>S$28.00</span></div>
+        <div class="rc-row"><span>1 × Iced Latte</span><span>S$7.00</span></div>
+        <div class="rc-row mut"><span>Service charge 10%</span><span>S$3.50</span></div>
+        <div class="rc-row mut"><span>GST 9%</span><span>S$3.47</span></div>
+        <div class="rc-row tot"><span>Total paid</span><span>S$41.97</span></div>
+        <div class="rc-bar">
+          <span class="m" style="width:97.5%">S$40.92</span>
+          <span class="p" style="width:2.5%"></span>
+        </div>
+        <div class="rc-leg"><span><i style="background:#12b981"></i>The Golden Fork receives</span><b>S$40.92</b></div>
+        <div class="rc-leg"><span><i style="background:var(--brand)"></i>MakanPay platform fee</span><b>S$1.05</b></div>
+        <div class="shot-cap">
+          <b>Where the money went</b>
+          <span>GST applies to the service charge, not just the subtotal. The split
+          is a direct charge — funds land in the outlet's own balance with no
+          transfer step.</span>
+        </div>
+      </div>
+
+      <div class="shot">
+        <div class="tr-box">
+          <div class="tr-row ok"><span class="t">14:32:11</span><span class="m">GET …/status</span></div>
+          <div class="tr-row ok"><span class="t"></span><span class="d">succeeded · S$29.02 · tip S$2.64 · fee S$0.66</span></div>
+          <div class="tr-row ok"><span class="t"></span><span class="d">fee check — platform fee on the PRE-TIP total</span></div>
+          <div class="tr-row"><span class="t">14:32:08</span><span class="m">POST /terminal/simulate-card</span></div>
+          <div class="tr-row"><span class="t">14:32:04</span><span class="m">POST /terminal/process</span></div>
+          <div class="tr-row"><span class="t"></span><span class="d">process_config.tipping.amount_eligible</span></div>
+          <div class="tr-row"><span class="t">14:32:03</span><span class="m">POST /terminal/payment-intent</span></div>
+          <div class="tr-row"><span class="t"></span><span class="d">card_present · { stripeAccount: acct_1U8… }</span></div>
+        </div>
+        <div class="shot-cap">
+          <b>Every call, as it fires</b>
+          <span>A server-driven Terminal integration is otherwise invisible. The POS
+          streams each request live — no client SDK anywhere in the flow.</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section>
   <div class="wrap">
     <div class="lead">
       <h2>Lab coverage</h2>
