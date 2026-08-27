@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MakanPay — Monstar Lab × Stripe Partner Solutions Lab</title>
+<meta name="description" content="An end-to-end Stripe Connect implementation for F&B platforms — Connect onboarding, online Checkout, and server-driven Terminal. Built by Monstar Lab Singapore.">
+<style>
+  :root{
+    --ink:#0a0e1a; --ink-2:#141a2e; --paper:#ffffff; --wash:#f6f8fb;
+    --line:#e3e8ee; --muted:#697386; --text:#1a1f36;
+    --brand:#635bff; --brand-2:#00d4ff; --ok:#0e7c5a; --ok-bg:#e3f5ee;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
+       color:var(--text);background:var(--paper);line-height:1.6;-webkit-font-smoothing:antialiased}
+  a{color:inherit}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 28px}
+
+  /* ---------- hero ---------- */
+  .hero{background:var(--ink);color:#fff;position:relative;overflow:hidden}
+  .hero::before{content:"";position:absolute;inset:-40% -20% auto -20%;height:640px;
+    background:radial-gradient(60% 60% at 30% 30%,rgba(99,91,255,.42),transparent 70%),
+               radial-gradient(50% 50% at 75% 20%,rgba(0,212,255,.24),transparent 70%);
+    filter:blur(8px);pointer-events:none}
+  .hero-in{position:relative;padding:26px 0 76px}
+  .bar{display:flex;align-items:center;gap:14px;padding-bottom:64px}
+  .byline{display:flex;align-items:center;gap:10px;font-size:13px;letter-spacing:.02em}
+  .byline .ml{font-weight:700}
+  .byline .x{color:rgba(255,255,255,.35)}
+  .byline .st{color:rgba(255,255,255,.72)}
+  .tag{margin-left:auto;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+       color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.18);
+       padding:5px 11px;border-radius:20px}
+
+  .eyebrow{font-size:12px;letter-spacing:.16em;text-transform:uppercase;
+           color:var(--brand-2);font-weight:600;margin-bottom:16px}
+  h1{margin:0 0 18px;font-size:clamp(34px,5.4vw,58px);line-height:1.06;
+     letter-spacing:-.035em;font-weight:700;max-width:16ch}
+  h1 .grad{background:linear-gradient(92deg,#a8a2ff,#6ee7ff);-webkit-background-clip:text;
+           background-clip:text;color:transparent}
+  .lede{font-size:clamp(16px,2vw,19px);color:rgba(255,255,255,.76);max-width:62ch;margin:0 0 32px}
+
+  .cta{display:flex;gap:10px;flex-wrap:wrap}
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:12px 20px;border-radius:9px;
+       text-decoration:none;font-weight:600;font-size:14px;border:1px solid transparent;transition:.16s}
+  .btn.p{background:#fff;color:var(--ink)}
+  .btn.p:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(255,255,255,.18)}
+  .btn.g{border-color:rgba(255,255,255,.26);color:#fff}
+  .btn.g:hover{background:rgba(255,255,255,.09)}
+
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:26px;margin-top:58px;
+         padding-top:30px;border-top:1px solid rgba(255,255,255,.13)}
+  .stat b{display:block;font-size:26px;font-weight:700;letter-spacing:-.02em}
+  .stat span{font-size:12px;color:rgba(255,255,255,.56)}
+
+  /* ---------- sections ---------- */
+  section{padding:76px 0}
+  .alt{background:var(--wash);border-block:1px solid var(--line)}
+  .lead{max-width:64ch;margin-bottom:38px}
+  h2{margin:0 0 12px;font-size:clamp(24px,3.2vw,32px);letter-spacing:-.028em;line-height:1.16}
+  .sub{color:var(--muted);margin:0;font-size:16px}
+
+  .surfaces{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .surface{background:var(--paper);border:1px solid var(--line);border-radius:14px;
+           padding:24px;text-decoration:none;display:flex;flex-direction:column;transition:.16s}
+  .surface:hover{border-color:var(--brand);transform:translateY(-3px);
+                 box-shadow:0 14px 34px rgba(26,31,54,.09)}
+  .surface .ico{width:42px;height:42px;border-radius:11px;display:grid;place-items:center;
+                font-size:20px;background:var(--wash);margin-bottom:14px}
+  .surface h3{margin:0 0 6px;font-size:17px;letter-spacing:-.01em}
+  .surface p{margin:0 0 16px;color:var(--muted);font-size:14px;flex:1}
+  .surface .go{font-size:13px;font-weight:600;color:var(--brand)}
+  .chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px}
+  .chip{font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;
+        background:var(--wash);color:var(--muted);border:1px solid var(--line)}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:24px}
+  .card h3{margin:0 0 8px;font-size:16px;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
+  .card p{margin:0;color:var(--muted);font-size:14px}
+  .card code{font-family:var(--mono);font-size:12px;background:var(--wash);
+             padding:1px 5px;border-radius:4px;color:var(--text)}
+
+  /* fund flow */
+  .flow{background:var(--ink-2);color:#fff;border-radius:16px;padding:32px;margin-top:8px}
+  .flow-h{font-size:13px;color:rgba(255,255,255,.55);margin-bottom:20px;
+          letter-spacing:.08em;text-transform:uppercase}
+  .bar-split{display:flex;height:46px;border-radius:9px;overflow:hidden;margin-bottom:14px}
+  .bar-split .m{background:#12b981;display:grid;place-items:center;font-weight:700;font-size:14px}
+  .bar-split .p{background:var(--brand);display:grid;place-items:center;font-weight:700;font-size:13px}
+  .legend{display:flex;gap:26px;flex-wrap:wrap;font-size:13px;color:rgba(255,255,255,.72)}
+  .legend i{width:9px;height:9px;border-radius:3px;display:inline-block;margin-right:7px}
+  .flow-note{margin:20px 0 0;font-size:13px;color:rgba(255,255,255,.55);max-width:66ch}
+
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;
+     color:var(--muted);padding:10px 12px;border-bottom:1px solid var(--line)}
+  td{padding:12px;border-bottom:1px solid var(--line);vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  .done{color:var(--ok);background:var(--ok-bg);font-size:11px;font-weight:700;
+        padding:2px 8px;border-radius:20px;white-space:nowrap}
+
+  .docs{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .doc{border:1px solid var(--line);border-radius:11px;padding:16px 18px;
+       text-decoration:none;display:block;transition:.16s;background:var(--paper)}
+  .doc:hover{border-color:var(--brand);background:var(--wash)}
+  .doc b{display:block;font-size:14px;margin-bottom:3px}
+  .doc span{font-size:12.5px;color:var(--muted)}
+
+  footer{background:var(--ink);color:rgba(255,255,255,.6);padding:44px 0;font-size:13px}
+  .foot{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+  .foot .ml{color:#fff;font-weight:700}
+  .foot .sp{margin-left:auto}
+
+  @media(max-width:900px){
+    .surfaces,.grid2,.docs{grid-template-columns:1fr}
+    .stats{grid-template-columns:repeat(2,1fr);gap:20px}
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="wrap hero-in">
+    <div class="bar">
+      <div class="byline">
+        <span class="ml">Monstar Lab</span>
+        <span class="x">×</span>
+        <span class="st">Stripe Partner Solutions Lab</span>
+      </div>
+      <span class="tag">Singapore · Test mode</span>
+    </div>
+
+    <div class="eyebrow">F&amp;B payments accelerator</div>
+    <h1>Three payment surfaces.<br><span class="grad">One Connect backbone.</span></h1>
+    <p class="lede">
+      <strong>MakanPay</strong> is a complete implementation of the Partner Solutions Lab —
+      Connect onboarding, online Checkout, and a server-driven Terminal integration —
+      built as a reusable accelerator for the Singapore F&amp;B vertical.
+      Every flow below is live and runnable right now.
+    </p>
+
+    <div class="cta">
+      <a class="btn p" href="/admin.html">Open the platform console →</a>
+      <a class="btn g" href="#surfaces">See what was built</a>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><b>6 / 6</b><span>Lab tasks implemented</span></div>
+      <div class="stat"><b>5</b><span>F&amp;B-specific patterns</span></div>
+      <div class="stat"><b>3</b><span>Live payment surfaces</span></div>
+      <div class="stat"><b>70 / 30</b><span>Prebuilt vs configured</span></div>
+    </div>
+  </div>
+</div>
+
+<section id="surfaces">
+  <div class="wrap">
+    <div class="lead">
+      <h2>Try it yourself</h2>
+      <p class="sub">Three interfaces, one shared order ledger — so a dine-in ticket
+      and an online order are priced identically and reconcile together.</p>
+    </div>
+
+    <div class="surfaces">
+      <a class="surface" href="/admin.html">
+        <div class="ico">🏢</div>
+        <h3>Platform console</h3>
+        <p>Onboard outlets two ways, manage menus and readers, configure commercial
+        terms, and reconcile revenue by outlet and channel.</p>
+        <div class="chips">
+          <span class="chip">Connect v2</span><span class="chip">Express + API onboarding</span>
+          <span class="chip">Reconciliation</span>
+        </div>
+        <span class="go">Open console →</span>
+      </a>
+
+      <a class="surface" href="/store.html">
+        <div class="ico">🍽️</div>
+        <h3>Customer storefront</h3>
+        <p>A diner orders online and pays by card or PayNow. The receipt shows
+        exactly where the money went.</p>
+        <div class="chips">
+          <span class="chip">Checkout</span><span class="chip">Direct charge</span>
+          <span class="chip">PayNow</span>
+        </div>
+        <span class="go">Order something →</span>
+      </a>
+
+      <a class="surface" href="/pos.html">
+        <div class="ico">🧾</div>
+        <h3>POS &amp; Terminal</h3>
+        <p>Server-driven card-present payments with an on-screen S710, tip prompts,
+        running tabs and refunds — plus a live trace of every API call.</p>
+        <div class="chips">
+          <span class="chip">Terminal</span><span class="chip">Pre-auth tabs</span>
+          <span class="chip">On-reader tipping</span>
+        </div>
+        <span class="go">Run the till →</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <div class="lead">
+      <h2>Direct charges, end to end</h2>
+      <p class="sub">The outlet is merchant of record — its licences, its brand,
+      its name on the diner's statement.</p>
+    </div>
+
+    <div class="flow">
+      <div class="flow-h">A S$100.00 order</div>
+      <div class="bar-split">
+        <span class="m" style="width:97.5%">S$97.50 &nbsp;→&nbsp; the outlet</span>
+        <span class="p" style="width:2.5%"></span>
+      </div>
+      <div class="legend">
+        <span><i style="background:#12b981"></i>Outlet's own Stripe balance — S$97.50</span>
+        <span><i style="background:var(--brand)"></i>Platform fee — S$2.50</span>
+      </div>
+      <p class="flow-note">
+        Funds settle straight into the connected account and the platform fee is
+        collected automatically. No transfer step, no platform treasury, nothing to
+        reconcile between the two — and refunds reverse both sides together.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="lead">
+      <h2>What makes it an accelerator</h2>
+      <p class="sub">The Stripe primitives are documented. What isn't documented is the
+      composition — the logic that repeats in every F&amp;B engagement.</p>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h3>🍺 Running tabs, settled after the guest leaves</h3>
+        <p>Hold the card at first order, let rounds accrue, capture the real total —
+        and off-session-charge any overage to the card the reader saved. Capturing
+        less than the hold releases the rest. <code>setup_future_usage</code> makes
+        the tap leave a reusable card behind; no Customer object is involved.</p>
+      </div>
+      <div class="card">
+        <h3>💛 Tips carry a 0% platform fee</h3>
+        <p>The fee is computed on the pre-tip total and fixed at PaymentIntent
+        creation, so an on-reader tip raises the amount but never the fee.
+        Verified live: S$20.00 + S$3.00 tip = S$23.00, fee unchanged at S$0.50.</p>
+      </div>
+      <div class="card">
+        <h3>↩️ Refunds that reverse the platform too</h3>
+        <p>With direct charges there is no transfer to reverse, so
+        <code>refund_application_fee</code> is the only lever — and whether the
+        platform forgoes its fee is a business decision, exposed at the call site
+        rather than buried in a default.</p>
+      </div>
+      <div class="card">
+        <h3>🇸🇬 Singapore bill composition</h3>
+        <p>Service charge on the subtotal, then GST on the inclusive amount — GST
+        applies to the service charge. Getting that order backwards under-collects
+        tax on every transaction. Rates are per outlet.</p>
+      </div>
+      <div class="card">
+        <h3>🛵 The revenue that never touches Stripe</h3>
+        <p>Delivery aggregators and OTAs collect payment themselves and remit net
+        proceeds separately. Those orders are recorded as their own channel with no
+        PaymentIntent and no fee, so reconciliation stays honest about the boundary.</p>
+      </div>
+      <div class="card">
+        <h3>🔀 Two onboarding models, per outlet</h3>
+        <p>Stripe-hosted for an independent that self-serves; API-based for a chain
+        that already holds its outlets' data and won't run 200 browser sessions.
+        The same decision, configured rather than hard-coded.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <div class="lead">
+      <h2>Lab coverage</h2>
+      <p class="sub">Every task implemented and verified against the live test API,
+      including the optional one.</p>
+    </div>
+
+    <div class="card" style="padding:0;overflow:hidden">
+      <table>
+        <thead><tr><th>Task</th><th>Implementation</th><th></th></tr></thead>
+        <tbody>
+          <tr><td><strong>2.1</strong> Connected accounts</td>
+              <td>v2 Accounts API, Express <em>and</em> API-based onboarding, manual payouts</td>
+              <td><span class="done">Verified</span></td></tr>
+          <tr><td><strong>2.2</strong> Online payment</td>
+              <td>Checkout Session as a direct charge, card and PayNow, fee split on the receipt</td>
+              <td><span class="done">Verified</span></td></tr>
+          <tr><td><strong>2.3</strong> Terminal payment</td>
+              <td>Server-driven, no client SDK, on-reader tipping, on-screen S710</td>
+              <td><span class="done">Verified</span></td></tr>
+          <tr><td><strong>2.4</strong> Reconciliation webhook <em>(optional)</em></td>
+              <td>Built anyway — Connect-routed, idempotent by event id and by state, handles disputes</td>
+              <td><span class="done">Verified</span></td></tr>
+          <tr><td><strong>3A.1</strong> Refund with clawback</td>
+              <td>Application fee refunded alongside the charge, confirmed on Stripe</td>
+              <td><span class="done">Verified</span></td></tr>
+          <tr><td><strong>3A.2</strong> Pre-authorisation</td>
+              <td>Hold, capture below the hold, and off-session overage against the saved card</td>
+              <td><span class="done">Verified</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="sub" style="margin-top:20px;font-size:14px">
+      Track A patterns implemented, then documented as a Track B accelerator with the
+      four Connect decisions reasoned through for the F&amp;B vertical.
+    </p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="lead">
+      <h2>Documentation</h2>
+      <p class="sub">The artifacts the Partner Solutions Program asks for — architecture,
+      runbook, collection, commercial terms.</p>
+    </div>
+    <div class="docs">
+      <a class="doc" href="https://github.com/monstarx-tech/stripe-partner-demo/blob/main/DECISIONS.md">
+        <b>DECISIONS.md</b><span>Four Connect decisions, vertical patterns, the 70/30 split</span></a>
+      <a class="doc" href="https://github.com/monstarx-tech/stripe-partner-demo/blob/main/docs/ARCHITECTURE.md">
+        <b>Reference architecture</b><span>L100 landscape, L200 fund flow, L300 sequences</span></a>
+      <a class="doc" href="https://github.com/monstarx-tech/stripe-partner-demo/blob/main/docs/RUNBOOK.md">
+        <b>Operational runbook</b><span>Onboarding, readers, payouts, disputes, webhooks</span></a>
+      <a class="doc" href="https://github.com/monstarx-tech/stripe-partner-demo/tree/main/postman">
+        <b>Postman collection</b><span>35 requests across 10 folders, runnable in order</span></a>
+      <a class="doc" href="https://github.com/monstarx-tech/stripe-partner-demo/blob/main/docs/RATE-CARD.md">
+        <b>Rate card</b><span>Tiered pricing and explicit scope boundaries</span></a>
+      <a class="doc" href="https://github.com/monstarx-tech/stripe-partner-demo">
+        <b>Source</b><span>The full implementation on GitHub</span></a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot">
+    <span class="ml">Monstar Lab Singapore</span>
+    <span>Built for the Stripe Partner Solutions Lab</span>
+    <span class="sp">Stripe test mode — no live payments</span>
+  </div>
+</footer>
+
+</body>
+</html>
