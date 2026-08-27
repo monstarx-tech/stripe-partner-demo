@@ -209,6 +209,22 @@
   @media(max-width:900px){
     .surfaces,.grid2,.docs{grid-template-columns:1fr}
     .stats{grid-template-columns:repeat(2,1fr);gap:20px}
+    .wrap{padding:0 20px}
+    section{padding:52px 0}
+    .hero-in{padding:22px 0 54px}
+    .bar{padding-bottom:40px;flex-wrap:wrap;gap:8px}
+    .tag{margin-left:0;order:3;width:100%;text-align:center}
+    .flow{padding:22px}
+  }
+  @media(max-width:560px){
+    .wrap{padding:0 16px}
+    .stats{grid-template-columns:1fr 1fr;gap:16px;margin-top:34px}
+    .stat b{font-size:21px}
+    .cta{flex-direction:column}
+    .btn{justify-content:center}
+    .bar-split .m,.bar-split .p{font-size:11px}
+    .legend{flex-direction:column;gap:8px}
+    table{font-size:13px}
   }
 </style>
 </head>

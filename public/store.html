@@ -47,7 +47,20 @@
   .totals .row.grand { font-weight: 700; font-size: 15px; border-top: 1px solid var(--border); margin-top: 6px; padding-top: 8px; }
   .split { background: var(--accent-soft); border-radius: 8px; padding: 10px 12px; margin-top: 12px; font-size: 12px; }
   .split .row { display: flex; justify-content: space-between; padding: 2px 0; }
-  @media (max-width: 900px) { .shop { grid-template-columns: 1fr; } .cart { position: static; } }
+  @media (max-width: 900px) {
+    .shop { grid-template-columns: 1fr; }
+    .cart { position: static; }
+    .menu-grid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+  }
+  @media (max-width: 560px) {
+    .hero { padding: 20px 0; }
+    .hero-in { gap: 12px; flex-wrap: wrap; }
+    .hero .emoji { width: 44px; height: 44px; font-size: 22px; }
+    .hero h1 { font-size: 18px; }
+    .hero .spacer { display: none; }
+    .hero-in select { width: 100%; }
+    .menu-grid { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
