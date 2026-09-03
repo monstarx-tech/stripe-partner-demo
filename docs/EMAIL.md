@@ -27,9 +27,10 @@ too: the webhook step suggests `stripe listen --forward-to`, but since every
 charge is a direct charge on a connected account it needs `--forward-connect-to`,
 otherwise no events arrive.
 
-Do feel free to share the demo or the repo if it's useful. And we'd love to stay
-close to the Stripe team here — Monstar Lab has a good footprint in Singapore, so
-if delivery partner opportunities come up, we'd be glad to be considered.
+Do feel free to share the demo or the repo if it's useful. As a Stripe partner
+we're keen to keep building on this in Singapore — so if there are clients or
+delivery opportunities where this capability would help, we'd be glad to be
+involved.
 
 Best regards,
 **Vinoth Varatharajan**
