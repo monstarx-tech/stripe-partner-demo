@@ -25,9 +25,12 @@ a Connect build has a working reference to start from.
 Live demo → https://stripe-demo.monstarx.app
 Source → https://github.com/monstarx-tech/stripe-partner-demo
 
-Thanks to [SA NAME] and the Stripe team for a genuinely well-run session. Good
-to keep deepening the partnership — if you're building payments into a vertical
-platform, have a look, and do reach out.
+Thanks to [SA NAME] and the Stripe team for a genuinely well-run session — good
+to keep deepening the partnership.
+
+And if you're a product or engineering team weighing up embedded payments for
+your platform, the repo is a fair place to see what the build actually involves.
+Happy to talk it through.
 
 #Stripe #Payments #StripeConnect #Fintech #Singapore #MonstarLab
 
@@ -43,3 +46,5 @@ platform, have a look, and do reach out.
 - Everything is test mode — no live keys, no real payments. Worth knowing if
   anyone asks in the comments.
 - Mid-morning on a weekday tends to get better B2B reach.
+- The thanks and the call-to-action are deliberately separate paragraphs. Run
+  together they read as if you are telling the Stripe SA to reach out to you.
